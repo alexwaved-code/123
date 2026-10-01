@@ -24,3 +24,4 @@ Only edit your own rows. Move a row when you start or finish it.
 | T17 | B | done | On foot WASD walks and arrows look; buildings sit beside roads; taxi follows roads |
 | T18 | A | done | Energy flight, gear/landing, water contact, pilot HUD |
 | T19 | A | done | Mini-map HUD |
+| T20 | A | done | Abandoned-plane gravity, wreck, E no longer breaks the HUD |

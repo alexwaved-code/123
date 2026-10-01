@@ -72,6 +72,7 @@ function frame() {
     pilot.update(delta);
     updateCity(city, pilot.worldPosition());
     pilot.updateCamera(camera, delta);
+    updateJuice(delta, plane.userData.telemetry ?? { crashed: plane.userData.crashed, speed: plane.userData.speed ?? 0 });
   }
   renderer.render(scene, camera);
 }
@@ -96,6 +97,7 @@ if (import.meta.hot) {
     document.getElementById("game-menu-style")?.remove();
     document.getElementById("game-start-root")?.remove();
     document.getElementById("hail-taxi")?.remove();
+    document.getElementById("pilot-banner")?.remove();
     scene.clear();
   });
 }

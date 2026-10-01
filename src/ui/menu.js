@@ -18,7 +18,7 @@ function field(labelText, control) {
 
 function applyHud() {
   const show = getSettings().hud;
-  for (const id of ["hud", "plane-hud"]) {
+  for (const id of ["hud", "plane-hud", "pilot-banner"]) {
     const node = document.getElementById(id);
     if (node) node.style.display = show ? "" : "none";
   }
