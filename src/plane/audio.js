@@ -67,11 +67,17 @@ export function setFlightAudible(on) {
 
 export function updateFlightAudio(telemetry) {
   if (!ctx || ctx.state !== "running" || !audible) return;
-  const speedT = THREE_CLAMP((telemetry.speed - 8) / 70);
-  const throttle = telemetry.throttle ?? speedT;
-  engine.frequency.value = 62 + throttle * 118 + speedT * 24;
-  filter.frequency.value = 280 + throttle * 520;
-  engineGain.gain.value = (0.018 + throttle * 0.045) * masterVolume;
+  if (telemetry.crashed) {
+    engineGain.gain.value = 0;
+    windGain.gain.value = 0.01 * masterVolume;
+    return;
+  }
+  const speedT = THREE_CLAMP(telemetry.speed / 70);
+  const throttle = telemetry.throttle ?? 0;
+  engine.frequency.value = 48 + throttle * 130 + speedT * 20;
+  filter.frequency.value = 240 + throttle * 520;
+  const engineLevel = throttle < 0.02 ? 0.006 : 0.016 + throttle * 0.05;
+  engineGain.gain.value = engineLevel * masterVolume;
   windGain.gain.value = (speedT * speedT * 0.055 + (telemetry.altitude < 18 ? 0.02 : 0)) * masterVolume;
 }
 

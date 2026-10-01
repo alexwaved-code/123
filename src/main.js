@@ -1,10 +1,12 @@
 import * as THREE from "three";
-import { SPAWN } from "./shared/constants.js";
+import { createCity, updateCity } from "./city/createCity.js";
+import { createAirport } from "./plane/airport.js";
+import { resetPlane } from "./plane/crash.js";
+import { createFollowCamera } from "./plane/followCamera.js";
 import { createPlane } from "./plane/createPlane.js";
 import { updateFlight } from "./plane/flight.js";
-import { createFollowCamera } from "./plane/followCamera.js";
 import { attachFlightJuice } from "./plane/juice.js";
-import { createCity } from "./city/createCity.js";
+import { RUNWAY, SPAWN } from "./shared/constants.js";
 import { createGameMenu } from "./ui/menu.js";
 import { isPaused } from "./ui/settings.js";
 
@@ -27,32 +29,26 @@ sun.position.set(80, 140, 40);
 sun.castShadow = true;
 scene.add(sun);
 
-scene.add(createCity());
+const city = createCity();
+scene.add(city);
+scene.add(createAirport());
 
 const plane = createPlane();
 plane.position.set(SPAWN.x, SPAWN.y, SPAWN.z);
+plane.rotation.y = RUNWAY.heading;
 scene.add(plane);
+camera.position.set(SPAWN.x, SPAWN.y + 2.4, SPAWN.z - 8.5);
+camera.lookAt(SPAWN.x, SPAWN.y + 0.4, SPAWN.z + 6);
 
 const updateCamera = createFollowCamera(camera, plane);
 const updateJuice = attachFlightJuice(scene, plane);
 const clock = new THREE.Clock();
 
-function resetPlane() {
-  plane.position.set(SPAWN.x, SPAWN.y, SPAWN.z);
-  plane.rotation.set(0, 0, 0);
-  if (plane.userData.visual) plane.userData.visual.rotation.set(0, 0, 0);
-  plane.userData.speed = 28;
-  plane.userData.throttle = 0.32;
-  plane.userData.yawRate = 0;
-  plane.userData.climbRate = 0;
-  plane.userData.hit = false;
-}
-
 const menu = createGameMenu({
   scene,
   renderer,
   sun,
-  onRestart: resetPlane,
+  onRestart: () => resetPlane(plane),
 });
 
 function frame() {
@@ -63,6 +59,7 @@ function frame() {
     return;
   }
   const telemetry = updateFlight(plane, delta);
+  updateCity(city, plane.position);
   updateCamera(delta, telemetry);
   updateJuice(delta, telemetry);
   renderer.render(scene, camera);

@@ -17,6 +17,12 @@ function ensure() {
 
 export function updateOverlay(telemetry) {
   const layer = ensure();
+  if (telemetry.crashed) {
+    layer.style.background = "radial-gradient(ellipse at center, rgba(80,0,0,0.15) 40%, rgba(40,0,0,0.5) 100%)";
+    layer.style.boxShadow = "inset 0 0 160px rgba(120,0,0,0.55)";
+    layer.style.opacity = "1";
+    return;
+  }
   const speedT = Math.min(1, Math.max(0, (telemetry.speed - 20) / 55));
   const hit = telemetry.hit ? 0.22 : 0;
   const low = telemetry.altitude < 10 ? 0.1 : 0;

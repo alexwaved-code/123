@@ -8,9 +8,15 @@ export function createFollowCamera(camera, plane) {
   let shake = 0;
 
   return function updateCamera(delta = 0.016, telemetry = {}) {
-    const speed = plane.userData.speed ?? 28;
-    const back = 10.5 + speed * 0.07;
-    const height = 3.4 + speed * 0.025;
+    if (plane.userData.snapCamera) {
+      snapped = false;
+      plane.userData.snapCamera = false;
+    }
+
+    const speed = plane.userData.speed ?? 0;
+    const grounded = !plane.userData.airborne;
+    const back = grounded ? 8.5 : 10.5 + speed * 0.07;
+    const height = grounded ? 2.4 : 3.4 + speed * 0.025;
     const yaw = plane.rotation.y;
     desired.set(
       plane.position.x + Math.sin(yaw) * back,
@@ -18,11 +24,12 @@ export function createFollowCamera(camera, plane) {
       plane.position.z + Math.cos(yaw) * back,
     );
 
-    if (telemetry.hit) shake = 0.62;
-    if (telemetry.altitude < 16) shake = Math.max(shake, 0.08);
+    if (telemetry.crashed) shake = Math.max(shake, 0.9);
+    else if (telemetry.hit) shake = 0.62;
+    else if (telemetry.altitude < 8 && plane.userData.airborne) shake = Math.max(shake, 0.06);
     shake *= Math.pow(0.02, delta);
 
-    if (!snapped) {
+    if (!snapped || (grounded && speed < 1)) {
       camera.position.copy(desired);
       snapped = true;
     } else {
@@ -38,9 +45,11 @@ export function createFollowCamera(camera, plane) {
       plane.position.z - Math.cos(yaw) * 6,
     );
     camera.lookAt(look);
-    camera.rotateZ(-(plane.userData.visual?.rotation.z ?? 0) * 0.55);
+    if (!telemetry.crashed) {
+      camera.rotateZ(-(plane.userData.visual?.rotation.z ?? 0) * 0.55);
+    }
 
-    const wantFov = 67 + speed * 0.24;
+    const wantFov = telemetry.crashed ? 62 : 67 + speed * 0.24;
     camera.fov += (wantFov - camera.fov) * 0.08;
     camera.updateProjectionMatrix();
   };

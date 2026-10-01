@@ -1,5 +1,8 @@
 import * as THREE from "three";
 import { getCityColliders } from "../city/colliders.js";
+import { getGroundHeight } from "../city/createCity.js";
+import { GEAR_HEIGHT } from "../shared/constants.js";
+import { crashPlane } from "./crash.js";
 
 const planeSize = new THREE.Vector3(2.6, 1.5, 5.2);
 const planeBox = new THREE.Box3();
@@ -16,7 +19,9 @@ function smallestPush(plane, building) {
     return;
   }
   if (overlapY <= overlapZ) {
-    plane.position.y += plane.position.y < center.y ? -overlapY : overlapY;
+    const push = plane.position.y < center.y ? -overlapY : overlapY;
+    const floor = getGroundHeight(plane.position.x, plane.position.z) + GEAR_HEIGHT * 0.5;
+    plane.position.y = Math.max(floor, plane.position.y + push);
     return;
   }
   plane.position.z += plane.position.z < center.z ? -overlapZ : overlapZ;
@@ -24,6 +29,7 @@ function smallestPush(plane, building) {
 
 /** Agent A. Reads Agent B's `getCityColliders()`. */
 export function resolveCollisions(plane) {
+  if (plane.userData.crashed) return false;
   plane.updateMatrixWorld(true);
   planeBox.setFromCenterAndSize(plane.position, planeSize);
 
@@ -33,14 +39,13 @@ export function resolveCollisions(plane) {
     hit = true;
     smallestPush(plane, building);
     planeBox.setFromCenterAndSize(plane.position, planeSize);
-    plane.userData.speed *= 0.62;
+    if (plane.userData.speed > 8 || plane.userData.airborne) {
+      crashPlane(plane, "hit a building");
+      break;
+    }
+    plane.userData.speed = 0;
   }
 
-  if (plane.position.y < 4) {
-    plane.position.y = 4;
-    if (plane.userData.speed > 20) plane.userData.speed *= 0.92;
-  }
-
-  plane.userData.hit = hit;
-  return hit;
+  plane.userData.hit = hit || plane.userData.crashed;
+  return plane.userData.hit;
 }

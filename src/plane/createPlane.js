@@ -68,15 +68,37 @@ export function createPlane() {
   }
   visual.add(landing);
 
+  const gear = new THREE.Group();
+  gear.name = "gear";
+  const wheelMat = mat(0x1a1a1a, { roughness: 0.9 });
+  const wheels = [
+    [0, -0.62, -1.6],
+    [-0.85, -0.62, 0.9],
+    [0.85, -0.62, 0.9],
+  ];
+  for (const [x, y, z] of wheels) {
+    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.16, 10), wheelMat);
+    wheel.rotation.z = Math.PI / 2;
+    wheel.position.set(x, y, z);
+    gear.add(wheel);
+  }
+  visual.add(gear);
+
   root.add(visual);
-  root.userData.speed = 28;
-  root.userData.throttle = 0.32;
+  root.userData.speed = 0;
+  root.userData.throttle = 0;
+  root.userData.vs = 0;
+  root.userData.pitchAtt = 0;
   root.userData.hit = false;
+  root.userData.airborne = false;
+  root.userData.gearDown = true;
+  root.userData.crashed = false;
   root.userData.visual = visual;
   root.userData.prop = prop;
   root.userData.propDisc = disc;
   root.userData.strobes = [strobeL, strobeR];
   root.userData.landing = landing;
+  root.userData.gear = gear;
   root.userData.yawRate = 0;
   root.userData.climbRate = 0;
   return root;
