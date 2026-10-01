@@ -8,6 +8,7 @@ import { updateHud } from "./hud.js";
 
 const keys = new Set();
 const just = new Set();
+const keyAt = new Map();
 
 const CLIMB = ["KeyR", "Space", "ArrowUp", "Numpad8", "PageUp", "Equal", "NumpadAdd"];
 const DESCEND = ["KeyF", "KeyC", "ArrowDown", "Numpad2", "PageDown", "Minus", "NumpadSubtract"];
@@ -33,15 +34,18 @@ function onKeyDown(event) {
   event.preventDefault();
   if (!keys.has(event.code)) just.add(event.code);
   keys.add(event.code);
+  keyAt.set(event.code, performance.now());
 }
 
 function onKeyUp(event) {
   keys.delete(event.code);
+  keyAt.delete(event.code);
 }
 
 function clearKeys() {
   keys.clear();
   just.clear();
+  keyAt.clear();
 }
 
 window.addEventListener("keydown", onKeyDown, { capture: true });
@@ -50,9 +54,18 @@ window.addEventListener("blur", clearKeys);
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) clearKeys();
 });
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    window.removeEventListener("keydown", onKeyDown, { capture: true });
+    window.removeEventListener("keyup", onKeyUp, { capture: true });
+    window.removeEventListener("blur", clearKeys);
+    clearKeys();
+  });
+}
 
 function held(codes) {
-  return codes.some((code) => keys.has(code)) ? 1 : 0;
+  const now = performance.now();
+  return codes.some((code) => keys.has(code) && now - (keyAt.get(code) ?? 0) < 140) ? 1 : 0;
 }
 
 function tapped(code) {
@@ -160,14 +173,14 @@ export function updateFlight(plane, delta) {
     plane.userData.yawRate = damp(plane.userData.yawRate, yawIn * turnScale, 7, delta);
     plane.rotation.y += plane.userData.yawRate * delta;
     plane.userData.pitchAtt = THREE.MathUtils.clamp(
-      damp(plane.userData.pitchAtt, climbIn * 0.32, 6, delta),
+      damp(plane.userData.pitchAtt, climbIn * 0.32, 10, delta),
       -0.42,
       0.48,
     );
 
     const stall = Math.max(0, (VS - plane.userData.speed) / VS);
-    const lift = (plane.userData.speed / VS) ** 2 * (0.42 + plane.userData.pitchAtt * 1.7);
-    const accelY = lift * 21 - GRAVITY - stall * 16;
+    const lift = (plane.userData.speed / VS) ** 2 * (0.2 + plane.userData.pitchAtt * 1.45);
+    const accelY = lift * GRAVITY - GRAVITY - stall * 16;
     plane.userData.vs += accelY * delta;
     plane.userData.vs *= 1 - 0.35 * delta;
     plane.position.y += plane.userData.vs * delta;

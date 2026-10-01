@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { SPAWN } from "../shared/constants.js";
+import { overlapsRunway, SPAWN } from "../shared/constants.js";
 import { registerCollider, resetColliders, unregisterCollider } from "./colliders.js";
 import { CHUNK_SIZE, chunkCoord, chunkHash, getGroundHeight, terrainType } from "./terrain.js";
 
@@ -58,6 +58,7 @@ function addRoad(group, x, z, width, length, alongX, color, y = 0.03) {
 }
 
 function addSolid(group, w, h, d, x, y, z, color) {
+  if (overlapsRunway(x, z, w, d)) return null;
   const mesh = new THREE.Mesh(geo("box", w, h, d), mat(color, 0.72));
   mesh.position.set(x, y, z);
   mesh.castShadow = true;
@@ -68,6 +69,7 @@ function addSolid(group, w, h, d, x, y, z, color) {
 }
 
 function addTree(group, x, z) {
+  if (overlapsRunway(x, z, 8, 8)) return;
   const trunk = new THREE.Mesh(geo("trunk"), mat(0x6b4a32, 0.9));
   trunk.position.set(x, 2, z);
   trunk.castShadow = true;
@@ -82,6 +84,11 @@ function release(group) {
     if (object3d.userData.solid) unregisterCollider(object3d);
   });
   group.removeFromParent();
+}
+
+function unloadAll() {
+  for (const group of loaded.values()) release(group);
+  loaded.clear();
 }
 
 function buildDowntown(group, cx, cz, ox, oz) {
@@ -227,8 +234,8 @@ function ensureChunks(root, cx, cz) {
 
 /** Agent B. Empty root, then the 5×5 chunks around spawn. */
 export function createCity() {
+  unloadAll();
   resetColliders();
-  loaded.clear();
   cityRoot = null;
   lastCx = Number.NaN;
   lastCz = Number.NaN;
@@ -245,7 +252,7 @@ export function createCity() {
  */
 export function updateCity(root, worldPosition) {
   if (root !== cityRoot) {
-    loaded.clear();
+    unloadAll();
     resetColliders();
     cityRoot = root;
     lastCx = Number.NaN;

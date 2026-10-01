@@ -19,3 +19,15 @@ export const VS = 16;
 export const VR = 28;
 export const VREF = 22;
 export const GRAVITY = 19;
+
+export function onRunway(x, z) {
+  return Math.abs(x - RUNWAY.x) <= RUNWAY.width * 0.5 + 1 && z >= RUNWAY.z0 && z <= RUNWAY.z1;
+}
+
+/** True if a box centered at x,z would sit on the airport strip. */
+export function overlapsRunway(x, z, w = 0, d = 0) {
+  const pad = 10;
+  const left = RUNWAY.x - RUNWAY.width * 0.5 - pad;
+  const right = RUNWAY.x + RUNWAY.width * 0.5 + pad;
+  return !(x + w * 0.5 < left || x - w * 0.5 > right || z + d * 0.5 < RUNWAY.z0 || z - d * 0.5 > RUNWAY.z1);
+}

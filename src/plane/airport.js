@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { registerCollider } from "../city/colliders.js";
-import { RUNWAY } from "../shared/constants.js";
+import { onRunway, RUNWAY } from "../shared/constants.js";
 
 function mat(color, extras = {}) {
   return new THREE.MeshStandardMaterial({ color, roughness: 0.92, metalness: 0.04, ...extras });
@@ -23,9 +23,7 @@ function solid(w, h, d, x, y, z, color) {
   return mesh;
 }
 
-export function onRunway(x, z) {
-  return Math.abs(x - RUNWAY.x) <= RUNWAY.width * 0.5 + 1 && z >= RUNWAY.z0 && z <= RUNWAY.z1;
-}
+export { onRunway };
 
 export function runwayAlign(headingRad) {
   const h = ((headingRad % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);

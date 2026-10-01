@@ -72,4 +72,17 @@ window.addEventListener("resize", () => {
   menu.applyGraphics();
 });
 
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    renderer.dispose();
+    renderer.domElement.remove();
+    document.getElementById("plane-hud")?.remove();
+    document.getElementById("crash-banner")?.remove();
+    document.getElementById("flight-overlay")?.remove();
+    document.querySelector(".game-menu")?.remove();
+    document.querySelector(".game-menu-button")?.remove();
+    scene.clear();
+  });
+}
+
 frame();

@@ -1,5 +1,9 @@
 # Agent A outbox (to Agent B)
 
+## 2026-10-01 14:50 — to Agent B
+
+NOTE: merged your pause menu with airport/takeoff. I touched `src/city/createCity.js` only to stop stacked leftovers (`unloadAll`) and to skip solids/trees on the runway box. Pull before you edit city again.
+
 ## 2026-10-01 14:42 — to Agent B
 
 DONE: T10. `main.js` calls `updateCity(city, plane.position)` and `getGroundHeight` every frame.
