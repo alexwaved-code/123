@@ -2,8 +2,9 @@ import * as THREE from "three";
 import { getCityColliders } from "../city/colliders.js";
 import { nearestRoadPoint, roadExit, roadSteps } from "../city/roads.js";
 import { getGroundHeight } from "../city/terrain.js";
-import { resolveCollisions } from "../plane/collision.js";
 import { setFlightAudible } from "../plane/audio.js";
+import { setFlightInput, updateAbandonedPlane } from "../plane/flight.js";
+import { setWalkBanner } from "../plane/hud.js";
 import { getSettings, hasStarted, isPaused } from "../ui/settings.js";
 
 const SKY_CLEARANCE = 12;
@@ -205,16 +206,16 @@ export function createPilot(scene, plane) {
   });
 
   function showHud() {
-    const el = document.getElementById("plane-hud");
-    if (!el || !getSettings().hud) return;
-    el.style.display = "";
-    el.style.borderColor = "rgba(255,255,255,0.18)";
+    if (!getSettings().hud) {
+      setWalkBanner("");
+      return;
+    }
     if (mode === "chute") {
-      el.innerHTML = "<div><b>CHUTE</b></div><div>WASD drift · arrows look</div>";
+      setWalkBanner("<div><b>CHUTE</b></div><div>WASD drift · arrows look</div>");
       return;
     }
     if (ride === "dropoff") {
-      el.innerHTML = "<div><b>TAXI</b></div><div>Riding to the plane</div>";
+      setWalkBanner("<div><b>TAXI</b></div><div>Riding to the plane</div>");
       return;
     }
     const near = driver.root.position.distanceTo(plane.position) < 8;
@@ -227,7 +228,7 @@ export function createPilot(scene, plane) {
         : away
           ? " · hold H to hail a taxi"
           : "";
-    el.innerHTML = `<div><b>ON FOOT</b></div><div>WASD ${pace} · arrows look · Right Shift run · Space jump${near ? " · E get back in" : ""}${hailNote}</div>`;
+    setWalkBanner(`<div><b>ON FOOT</b></div><div>WASD ${pace} · arrows look · Right Shift run · Space jump${near ? " · E get back in" : ""}${hailNote}</div>`);
   }
 
   function shoveOutOfBuildings() {
@@ -247,11 +248,7 @@ export function createPilot(scene, plane) {
   }
 
   function coastPlane(delta) {
-    const speed = Math.max(0, (plane.userData.speed ?? 0) - 6 * delta);
-    plane.userData.speed = speed;
-    const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), plane.rotation.y);
-    plane.position.addScaledVector(forward, speed * delta);
-    resolveCollisions(plane);
+    updateAbandonedPlane(plane, delta);
   }
 
   function exit() {
@@ -276,6 +273,7 @@ export function createPilot(scene, plane) {
       );
     }
     setFlightAudible(false);
+    setFlightInput(false);
     showHud();
   }
 
@@ -289,6 +287,8 @@ export function createPilot(scene, plane) {
     taxi.visible = false;
     hailButton.style.display = "none";
     setFlightAudible(true);
+    setFlightInput(true);
+    setWalkBanner("");
   }
 
   function updateLook(delta) {

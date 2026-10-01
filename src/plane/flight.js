@@ -1,15 +1,16 @@
 import * as THREE from "three";
 import { getGroundHeight } from "../city/createCity.js";
-import { GEAR_HEIGHT, VREF, VR, VS } from "../shared/constants.js";
+import { GEAR_HEIGHT, GRAVITY, VREF, VR, VS } from "../shared/constants.js";
 import { onRunway, runwayAlign } from "./airport.js";
 import { resolveCollisions } from "./collision.js";
-import { resetPlane } from "./crash.js";
+import { crashPlane, resetPlane, updateWreck } from "./crash.js";
 import { updateHud } from "./hud.js";
 import { handleContact } from "./landing.js";
 import { ensureSplash, isWater, trickleSplash, updateSplash } from "./water.js";
 
 const keys = new Set();
 const just = new Set();
+let inputLive = true;
 
 const CLIMB = ["ArrowUp", "Numpad8"];
 const DESCEND = ["ArrowDown", "Numpad2"];
@@ -29,7 +30,13 @@ const BLOCK = new Set([
   "NumpadEnter",
 ]);
 
+export function setFlightInput(on) {
+  inputLive = Boolean(on);
+  if (!on) clearKeys();
+}
+
 function onKeyDown(event) {
+  if (!inputLive) return;
   if (event.isComposing || event.keyCode === 229) return;
   if (!BLOCK.has(event.code)) return;
   event.preventDefault();
@@ -136,10 +143,11 @@ export function updateFlight(plane, delta) {
   }
 
   if (plane.userData.crashed) {
-    plane.userData.speed = damp(plane.userData.speed, 0, 4, delta);
+    updateWreck(plane, delta, deck, water);
     if (water && plane.userData.speed > 1.5) trickleSplash(plane.position, plane.userData.speed);
     updateGearVisual(plane, delta);
-    const telemetry = readTelemetry(plane, rwy, align, climbIn, water, agl);
+    const telemetry = readTelemetry(plane, rwy, align, climbIn, water, Math.max(0, plane.position.y - groundY));
+    plane.userData.telemetry = telemetry;
     updateHud(telemetry);
     just.clear();
     return telemetry;
@@ -222,8 +230,61 @@ export function updateFlight(plane, delta) {
   }
 
   const telemetry = readTelemetry(plane, rwy, align, climbIn, water, Math.max(0, plane.position.y - groundY));
+  plane.userData.telemetry = telemetry;
   updateHud(telemetry);
   just.clear();
+  return telemetry;
+}
+
+/** Empty airframe after the driver leaves. No lift. Gravity, then a wreck. */
+export function updateAbandonedPlane(plane, delta) {
+  if (plane.parent) ensureSplash(plane.parent);
+  updateSplash(delta);
+
+  const groundY = getGroundHeight(plane.position.x, plane.position.z);
+  const water = isWater(plane.position.x, plane.position.z);
+  const rwy = onRunway(plane.position.x, plane.position.z);
+  const align = runwayAlign(plane.rotation.y);
+  const deck = deckHeight(plane, groundY, water);
+  plane.userData.throttle = damp(plane.userData.throttle ?? 0, 0, 1.4, delta);
+
+  if (plane.userData.crashed) {
+    updateWreck(plane, delta, deck, water);
+  } else if (!plane.userData.airborne) {
+    const surface = water ? 16 : rwy ? 0.8 : 3.2;
+    plane.userData.speed = Math.max(0, (plane.userData.speed ?? 0) - (6 + surface) * delta);
+    plane.position.y = deck;
+    plane.userData.vs = 0;
+    const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), plane.rotation.y);
+    plane.position.addScaledVector(forward, plane.userData.speed * delta);
+    resolveCollisions(plane);
+    if (!plane.userData.crashed) {
+      plane.position.y = deckHeight(plane, getGroundHeight(plane.position.x, plane.position.z), water);
+    }
+  } else {
+    plane.userData.pitchAtt = damp(plane.userData.pitchAtt ?? 0, -0.42, 1.6, delta);
+    plane.userData.vs = (plane.userData.vs ?? 0) - GRAVITY * 1.15 * delta;
+    plane.userData.speed = Math.max(0, (plane.userData.speed ?? 0) + (-plane.userData.vs * 0.12 - plane.userData.speed * 0.08) * delta);
+    plane.position.y += plane.userData.vs * delta;
+    const visual = plane.userData.visual;
+    if (visual) {
+      visual.rotation.x = damp(visual.rotation.x, plane.userData.pitchAtt, 3.2, delta);
+      visual.rotation.z = damp(visual.rotation.z, 0.35, 1.1, delta);
+    }
+    const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), plane.rotation.y);
+    plane.position.addScaledVector(forward, plane.userData.speed * delta);
+    if (plane.position.y <= deck + 0.08) {
+      const sink = Math.max(0, -plane.userData.vs);
+      if (sink > 3.5 || plane.userData.speed > 10) crashPlane(plane, "abandoned");
+      else handleContact(plane, groundY, rwy, align);
+    } else {
+      resolveCollisions(plane);
+    }
+  }
+
+  updateGearVisual(plane, delta);
+  const telemetry = readTelemetry(plane, rwy, align, 0, water, Math.max(0, plane.position.y - groundY));
+  plane.userData.telemetry = telemetry;
   return telemetry;
 }
 

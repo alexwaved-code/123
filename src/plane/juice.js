@@ -1,5 +1,5 @@
 import { createAtmosphere, updateAtmosphere } from "./atmosphere.js";
-import { createContrail, createCrashSmoke, pulseHit, updatePlaneFx } from "./fx.js";
+import { createContrail, createCrashSmoke, createWreckFx, pulseHit, updatePlaneFx } from "./fx.js";
 import { updateOverlay } from "./overlay.js";
 import { playHitThump, resumeFlightAudio, updateFlightAudio } from "./audio.js";
 
@@ -8,8 +8,10 @@ export function attachFlightJuice(scene, plane) {
   const atmosphere = createAtmosphere(scene);
   const updateContrail = createContrail(plane);
   const updateSmoke = createCrashSmoke(plane);
+  const updateWreckFx = createWreckFx(plane);
   let wasHit = false;
   let wasCrash = false;
+  let wasImpact = false;
   const clock = { t: 0 };
 
   window.addEventListener("pointerdown", resumeFlightAudio, { once: true });
@@ -21,6 +23,7 @@ export function attachFlightJuice(scene, plane) {
     updatePlaneFx(plane, delta, telemetry, clock.t);
     updateContrail(delta, telemetry);
     updateSmoke();
+    updateWreckFx(delta);
     updateOverlay(telemetry);
     updateFlightAudio(telemetry);
     if (telemetry.hit && !wasHit) {
@@ -28,7 +31,9 @@ export function attachFlightJuice(scene, plane) {
       playHitThump();
     }
     if (telemetry.crashed && !wasCrash) playHitThump();
+    if (plane.userData.wreckImpact && !wasImpact) playHitThump();
     wasHit = telemetry.hit;
     wasCrash = telemetry.crashed;
+    wasImpact = Boolean(plane.userData.wreckImpact);
   };
 }

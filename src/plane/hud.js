@@ -238,7 +238,9 @@ function buildLadder(root) {
 function ensureHud() {
   injectStyle();
   let el = document.getElementById("plane-hud");
-  if (el && el.dataset.pfd === "3") return el;
+  if (el && el.dataset.pfd === "3" && document.getElementById("pfd-ias") && document.getElementById("pfd-horizon")) {
+    return el;
+  }
   el?.remove();
   el = document.createElement("div");
   el.id = "plane-hud";
@@ -351,6 +353,43 @@ export function updateHud(telemetry) {
   banner.innerHTML = crashed
     ? `<div>${(telemetry.crashReason || "aircraft destroyed").toUpperCase()}<br><span style="font:14px/1.5 ui-sans-serif,system-ui;font-weight:500;opacity:.8">ENTER — runway 18</span></div>`
     : "";
+}
+
+function ensureWalkBanner() {
+  let el = document.getElementById("pilot-banner");
+  if (el) return el;
+  el = document.createElement("div");
+  el.id = "pilot-banner";
+  el.style.cssText = [
+    "position:fixed",
+    "left:16px",
+    "bottom:18px",
+    "z-index:7",
+    "display:none",
+    "padding:10px 12px",
+    "background:rgba(8,16,28,0.72)",
+    "border:1px solid rgba(255,255,255,0.2)",
+    "color:#eef6ff",
+    "font:13px/1.45 ui-sans-serif,system-ui,sans-serif",
+    "pointer-events:none",
+  ].join(";");
+  document.body.appendChild(el);
+  return el;
+}
+
+/** On-foot text lives here so it cannot wipe the PFD. */
+export function setWalkBanner(html) {
+  const banner = ensureWalkBanner();
+  const pfd = document.getElementById("plane-hud");
+  if (html) {
+    banner.innerHTML = html;
+    banner.style.display = "";
+    if (pfd) pfd.style.display = "none";
+  } else {
+    banner.style.display = "none";
+    banner.innerHTML = "";
+    if (pfd && document.getElementById("pfd-ias")) pfd.style.display = "";
+  }
 }
 
 injectStyle();
