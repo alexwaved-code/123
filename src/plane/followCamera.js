@@ -4,6 +4,7 @@ import * as THREE from "three";
 export function createFollowCamera(camera, plane) {
   const desired = new THREE.Vector3();
   const look = new THREE.Vector3();
+  let snapped = false;
 
   return function updateCamera() {
     const back = 11 + plane.userData.speed * 0.06;
@@ -14,7 +15,12 @@ export function createFollowCamera(camera, plane) {
       plane.position.y + height,
       plane.position.z + Math.cos(yaw) * back,
     );
-    camera.position.lerp(desired, 0.14);
+    if (!snapped) {
+      camera.position.copy(desired);
+      snapped = true;
+    } else {
+      camera.position.lerp(desired, 0.14);
+    }
     look.set(plane.position.x, plane.position.y + 0.6, plane.position.z);
     camera.lookAt(look);
   };
