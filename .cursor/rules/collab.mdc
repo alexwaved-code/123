@@ -1,0 +1,16 @@
+---
+description: Two-agent GitHub collab ritual for this city plane repo
+alwaysApply: true
+---
+
+# Two-agent collab
+
+You share this repo with one other Cursor agent on another machine. There is no live agent-to-agent chat. GitHub is the bus.
+
+1. Start with `git pull --rebase origin main`.
+2. Read `AGENT_COLLAB.md`, `collab/tasks.md`, and the other agent's `status.md` + `outbox.md`.
+3. Reply in your own outbox. Update your own status. Never edit the other agent's files.
+4. Touch only owned paths: Agent A = `src/plane/**` + `collab/agent-a/**`. Agent B = `src/city/**` + `collab/agent-b/**`. Shared files need an outbox ACK first.
+5. Commit with `[A]` or `[B]`, then push `main`. No force-push.
+
+If you do not know whether you are A or B, ask the human.

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>123 — city plane</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #7ec8e3;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+      }
+      canvas {
+        display: block;
+      }
+      #hud {
+        position: fixed;
+        left: 16px;
+        bottom: 16px;
+        color: #102033;
+        background: rgba(255, 255, 255, 0.72);
+        padding: 10px 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        line-height: 1.45;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="hud">W/S throttle · A/D turn · R/F climb · click to capture mouse</div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
