@@ -46,7 +46,7 @@ export function updateHud(telemetry) {
   const hit = telemetry.hit ? "  • IMPACT" : "";
   el.style.borderColor = telemetry.hit ? "rgba(255,80,80,0.7)" : "rgba(255,255,255,0.18)";
   const help = performance.now() < helpUntil
-    ? "<div style='opacity:.7;margin-top:6px'>W/S throttle · A/D turn · Space climb · click for engine</div>"
+    ? "<div style='opacity:.7;margin-top:6px'>W/S throttle · A/D turn · R/F climb · EN keyboard</div>"
     : "";
   el.innerHTML = [
     `<div><b>IAS</b> ${telemetry.speed.toFixed(0)} m/s</div>`,

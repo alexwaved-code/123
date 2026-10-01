@@ -4,18 +4,44 @@ import { updateHud } from "./hud.js";
 
 const keys = new Set();
 
-window.addEventListener("keydown", (event) => {
+const CLIMB = ["KeyR", "Space", "ArrowUp", "Numpad8", "PageUp", "Equal", "NumpadAdd"];
+const DESCEND = ["KeyF", "KeyC", "ArrowDown", "Numpad2", "PageDown", "Minus", "NumpadSubtract"];
+const LEFT = ["KeyA", "ArrowLeft", "Numpad4"];
+const RIGHT = ["KeyD", "ArrowRight", "Numpad6"];
+const THROTTLE_UP = ["KeyW"];
+const THROTTLE_DOWN = ["KeyS"];
+const BLOCK = new Set([
+  ...CLIMB,
+  ...DESCEND,
+  ...LEFT,
+  ...RIGHT,
+  ...THROTTLE_UP,
+  ...THROTTLE_DOWN,
+]);
+
+function onKeyDown(event) {
+  if (event.isComposing || event.keyCode === 229) return;
+  if (!BLOCK.has(event.code)) return;
+  event.preventDefault();
   keys.add(event.code);
-  if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.code)) {
-    event.preventDefault();
-  }
-});
+}
 
-window.addEventListener("keyup", (event) => {
+function onKeyUp(event) {
   keys.delete(event.code);
+}
+
+function clearKeys() {
+  keys.clear();
+}
+
+window.addEventListener("keydown", onKeyDown, { capture: true });
+window.addEventListener("keyup", onKeyUp, { capture: true });
+window.addEventListener("blur", clearKeys);
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) clearKeys();
 });
 
-function held(...codes) {
+function held(codes) {
   return codes.some((code) => keys.has(code)) ? 1 : 0;
 }
 
@@ -25,9 +51,9 @@ function damp(current, target, lambda, delta) {
 
 /** Agent A. Arcade flight with a little inertia. City code should not call this. */
 export function updateFlight(plane, delta) {
-  const yawIn = held("KeyA", "ArrowLeft") - held("KeyD", "ArrowRight");
-  const climbIn = held("KeyR", "Space", "ArrowUp") - held("KeyF", "ControlLeft", "ControlRight", "ArrowDown");
-  const throttleIn = held("KeyW") - held("KeyS");
+  const yawIn = held(LEFT) - held(RIGHT);
+  const climbIn = held(CLIMB) - held(DESCEND);
+  const throttleIn = held(THROTTLE_UP) - held(THROTTLE_DOWN);
 
   plane.userData.throttle = THREE.MathUtils.clamp(
     (plane.userData.throttle ?? 0.32) + throttleIn * 0.55 * delta,
