@@ -88,7 +88,48 @@ function forwardOf(yaw, target) {
 }
 
 function rightOf(yaw, target) {
-  return target.set(Math.cos(yaw), 0, -Math.sin(yaw));
+  return target.set(-Math.cos(yaw), 0, Math.sin(yaw));
+}
+
+function isRunning() {
+  return keys.has("ShiftLeft") || keys.has("ShiftRight");
+}
+
+function shoutOhNo() {
+  let banner = document.getElementById("oh-no");
+  if (!banner) {
+    banner = document.createElement("div");
+    banner.id = "oh-no";
+    banner.textContent = "OH NO";
+    banner.style.cssText = [
+      "position:fixed",
+      "left:50%",
+      "top:18%",
+      "transform:translateX(-50%)",
+      "z-index:25",
+      "margin:0",
+      "color:#fff7ea",
+      "font:800 64px/1 ui-sans-serif,system-ui,sans-serif",
+      "letter-spacing:0.04em",
+      "text-shadow:0 6px 24px rgba(0,0,0,0.45)",
+      "pointer-events:none",
+    ].join(";");
+    document.body.append(banner);
+  }
+  banner.hidden = false;
+  clearTimeout(shoutOhNo.timer);
+  shoutOhNo.timer = setTimeout(() => {
+    banner.hidden = true;
+  }, 1600);
+
+  const volume = getSettings().volume;
+  if (volume <= 0 || !window.speechSynthesis) return;
+  const line = new SpeechSynthesisUtterance("Oh no!");
+  line.rate = 1.15;
+  line.pitch = 1.5;
+  line.volume = volume;
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(line);
 }
 
 function poseWalk(driver, time, amount) {
@@ -140,11 +181,12 @@ export function createPilot(scene, plane) {
     el.style.display = "";
     el.style.borderColor = "rgba(255,255,255,0.18)";
     if (mode === "chute") {
-      el.innerHTML = "<div><b>CHUTE</b></div><div>WASD drift · ridiculous dangle</div>";
+      el.innerHTML = "<div><b>CHUTE</b></div><div>A/D slide the way you face</div>";
       return;
     }
     const near = driver.root.position.distanceTo(plane.position) < 8;
-    el.innerHTML = `<div><b>ON FOOT</b></div><div>WASD silly walk${near ? " · E get back in" : ""}</div>`;
+    const pace = isRunning() ? "run" : "walk";
+    el.innerHTML = `<div><b>ON FOOT</b></div><div>WASD ${pace} · Shift run${near ? " · E get back in" : ""}</div>`;
   }
 
   function shoveOutOfBuildings() {
@@ -191,6 +233,7 @@ export function createPilot(scene, plane) {
       );
     }
     setFlightAudible(false);
+    if ((plane.userData.airborne || (plane.userData.speed ?? 0) > 8)) shoutOhNo();
     showHud();
   }
 
@@ -206,7 +249,7 @@ export function createPilot(scene, plane) {
     const ground = getGroundHeight(driver.root.position.x, driver.root.position.z);
     const drift = held("KeyW") - held("KeyS");
     const strafe = held("KeyD") - held("KeyA");
-    yaw += (held("KeyD") - held("KeyA")) * 0.4 * delta;
+    yaw += (held("KeyA") - held("KeyD")) * 1.1 * delta;
     forwardOf(yaw, forward);
     rightOf(yaw, right);
     driver.root.position.addScaledVector(forward, drift * 7 * delta);
@@ -223,11 +266,12 @@ export function createPilot(scene, plane) {
   function updateWalk(delta) {
     const move = held("KeyW") - held("KeyS");
     const turn = held("KeyA") - held("KeyD");
+    const run = isRunning() && move !== 0;
     yaw += turn * 2.6 * delta;
-    clock += delta * (Math.abs(move) > 0 ? 1 : 0.35);
+    clock += delta * (move === 0 ? 0 : run ? 1.45 : 1);
     if (move !== 0) {
       forwardOf(yaw, forward);
-      driver.root.position.addScaledVector(forward, move * 5.2 * delta);
+      driver.root.position.addScaledVector(forward, move * (run ? 10.5 : 5.2) * delta);
     }
     const ground = getGroundHeight(driver.root.position.x, driver.root.position.z);
     driver.root.position.y = ground;

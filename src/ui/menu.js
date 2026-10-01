@@ -262,7 +262,7 @@ export function createGameMenu({ scene, renderer, sun, onRestart }) {
     el("h1", "", "City plane"),
     el("p", "", "Take off from the runway, fly the city, or step out and walk."),
     Object.assign(document.createElement("ul"), {
-      innerHTML: "<li>W / S throttle</li><li>A / D turn</li><li>Up / Down pitch and brake</li><li>G gear</li><li>F leave the plane</li>",
+      innerHTML: "<li>W / S throttle</li><li>A / D turn</li><li>Up / Down pitch and brake</li><li>G gear</li><li>F leave the plane</li><li>Shift run on foot</li>",
     }),
     startButton,
   );

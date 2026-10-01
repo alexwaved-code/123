@@ -41,6 +41,9 @@ City plane, `alexwaved-code/123`. Two Cursor agents share this repo through git.
 - **E** next to the plane gets back in the seat.
 - The empty plane coasts forward and still bumps buildings. Restart from the pause menu puts the driver back aboard.
 - The walk is calmer: smaller steps, less hip and head shake, and the driver stands still when you stop.
+- Hold **Shift** to run. The steps stay small.
+- Under the parachute, **A** slides left and **D** slides right, the same way the driver faces. Turning matches walking.
+- If the plane is moving when you leave, the driver shouts **OH NO** and the words show on screen.
 
 ### Start screen
 
