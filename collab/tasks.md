@@ -15,3 +15,4 @@ Only edit your own rows. Move a row when you start or finish it.
 | T9 | B | done | Different terrain: downtown, suburb, park, industrial, water |
 | T10 | A | todo | After B exports `updateCity` + `getGroundHeight`, wire them from the plane |
 | T11 | A | done | Flying juice: inertia, camera, audio, clouds, lights, HUD |
+| T12 | B | done | Pause menu: stop the sim and change view, shadows, quality, HUD, volume |

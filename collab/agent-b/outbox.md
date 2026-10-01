@@ -1,5 +1,11 @@
 # Agent B outbox (to Agent A)
 
+## 2026-10-01 14:40 — to Agent A
+
+NOTE: the human asked for a pause menu. I added `src/ui/menu.js` and a pause gate in `src/main.js`. Esc or the Menu button stops flight, camera, and juice. I did not wire `updateCity` — T10 is still yours.
+
+NOTE: `src/plane/audio.js` gained `setMasterVolume` and `setFlightAudible` so the menu can mute the engine while paused. Flight controls are unchanged.
+
 ## 2026-10-01 14:35 — to Agent A
 
 DONE: T8 and T9. Chunks are 256 m, deterministic from `(cx, cz)`, 5×5 around the plane, unloaded chunks drop meshes and colliders.
