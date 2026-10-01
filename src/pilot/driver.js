@@ -101,20 +101,34 @@ function isRunning() {
 function buildTaxi() {
   const root = new THREE.Group();
   root.name = "taxi";
-  const paint = new THREE.MeshStandardMaterial({ color: 0xf0c020, roughness: 0.45 });
-  const dark = new THREE.MeshStandardMaterial({ color: 0x22262c, roughness: 0.4 });
-  const body = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.7, 4.2), paint);
-  body.position.y = 0.7;
-  body.castShadow = true;
-  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.7, 2.1), dark);
-  cabin.position.set(0, 1.25, -0.2);
-  cabin.castShadow = true;
-  root.add(body, cabin);
-  for (const [x, z] of [[-0.8, 1.3], [0.8, 1.3], [-0.8, -1.3], [0.8, -1.3]]) {
-    const wheel = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.45, 0.45), dark);
-    wheel.position.set(x, 0.28, z);
+  const yellow = 0xf5c518;
+  const glass = 0x243044;
+  const rubber = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.85 });
+  const wheelGeo = new THREE.CylinderGeometry(0.34, 0.34, 0.24, 12);
+  wheelGeo.rotateZ(Math.PI / 2);
+
+  root.add(part(1.72, 0.46, 4.05, yellow, 0, 0.58, 0));
+  root.add(part(1.56, 0.2, 1.25, yellow, 0, 0.82, 1.2));
+  root.add(part(1.56, 0.18, 0.85, yellow, 0, 0.8, -1.45));
+  root.add(part(1.5, 0.62, 1.75, glass, 0, 1.16, -0.12));
+  root.add(part(0.62, 0.16, 0.28, 0x111111, 0, 1.56, -0.12));
+  root.add(part(0.62, 0.05, 0.1, yellow, 0, 1.56, -0.12));
+  root.add(part(1.74, 0.16, 0.12, 0x2a2a2a, 0, 0.48, 2.02));
+  root.add(part(1.74, 0.16, 0.12, 0x2a2a2a, 0, 0.48, -2.02));
+  root.add(part(0.22, 0.14, 0.08, 0xfff4c4, -0.55, 0.72, 2.02));
+  root.add(part(0.22, 0.14, 0.08, 0xfff4c4, 0.55, 0.72, 2.02));
+  root.add(part(0.28, 0.12, 0.08, 0xc4382f, -0.58, 0.7, -2.02));
+  root.add(part(0.28, 0.12, 0.08, 0xc4382f, 0.58, 0.7, -2.02));
+
+  const wheels = [];
+  for (const [x, z] of [[-0.86, 1.25], [0.86, 1.25], [-0.86, -1.25], [0.86, -1.25]]) {
+    const wheel = new THREE.Mesh(wheelGeo, rubber);
+    wheel.position.set(x, 0.34, z);
+    wheel.castShadow = true;
     root.add(wheel);
+    wheels.push(wheel);
   }
+  root.userData.wheels = wheels;
   root.visible = false;
   return root;
 }
@@ -453,10 +467,12 @@ export function createPilot(scene, plane) {
       if (!clearX) taxiVz *= 0.15;
       if (!clearZ) taxiVx *= 0.15;
     }
+    const rolled = Math.hypot(nx - taxi.position.x, nz - taxi.position.z);
     taxi.position.x = nx;
     taxi.position.z = nz;
     taxi.position.y = getGroundHeight(nx, nz);
     taxi.rotation.y = taxiYaw + Math.PI;
+    for (const wheel of taxi.userData.wheels) wheel.rotation.x -= rolled / 0.34;
     return Math.hypot(aimX - nx, aimZ - nz);
   }
 
