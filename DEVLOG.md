@@ -49,7 +49,7 @@ City plane, `alexwaved-code/123`. Two Cursor agents share this repo through git.
 - Hold **Right Shift** to run. Left Shift does nothing. The steps stay small.
 - **Space** jumps while walking. One hop at a time, then gravity brings the driver back down.
 - Buildings sit in the blocks beside the roads, with a gap so they do not stand on the asphalt. The origin landmarks moved into those blocks.
-- If the plane is more than about 28 m away, hold **H** (or the yellow button) for a little over a second. The driver raises a hand. On a straight road the taxi stays in the middle. Corners are a smooth drift. If the destination is off the road, it stops a little before the closest point, turns gently that way, and drives over without going through buildings.
+- If the plane is more than about 28 m away, hold **H** (or the yellow button) for a little over a second. The driver raises a hand. The taxi takes the shortest road path and stays on it. It only leaves the road when the plane is within about 18 m and not on a road, then turns toward it without cutting through buildings.
 
 ### Start screen
 
