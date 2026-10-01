@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { overlapsRunway, SPAWN } from "../shared/constants.js";
 import { registerCollider, resetColliders, unregisterCollider } from "./colliders.js";
+import { blockLots, chunkRoads } from "./roads.js";
 import { CHUNK_SIZE, chunkCoord, chunkHash, getGroundHeight, terrainType } from "./terrain.js";
 
 const RADIUS = 2;
@@ -91,95 +92,138 @@ function unloadAll() {
   loaded.clear();
 }
 
+function paintRoads(group, cx, cz, color) {
+  for (const seg of chunkRoads(cx, cz)) {
+    const vertical = Math.abs(seg.x1 - seg.x2) < 0.1;
+    const length = vertical ? Math.abs(seg.z2 - seg.z1) : Math.abs(seg.x2 - seg.x1);
+    addRoad(
+      group,
+      (seg.x1 + seg.x2) / 2,
+      (seg.z1 + seg.z2) / 2,
+      seg.width,
+      length,
+      !vertical,
+      color,
+      vertical ? 0.03 : 0.04,
+    );
+  }
+}
+
+function placeInLot(group, lot, w, h, d, color) {
+  const roomW = lot.spanX - 7;
+  const roomD = lot.spanZ - 7;
+  if (w > roomW || d > roomD || roomW < 8 || roomD < 8) return null;
+  return addSolid(group, w, h, d, lot.cx, h / 2, lot.cz, color);
+}
+
 function buildDowntown(group, cx, cz, ox, oz) {
   addGround(group, ox, oz, 0x8aa37a);
-  for (let i = 0; i < 4; i += 1) {
-    const at = 40 + i * 58;
-    addRoad(group, ox + at, oz + CHUNK_SIZE / 2, 12, CHUNK_SIZE - 8, false, 0x4a4f55);
-    addRoad(group, ox + CHUNK_SIZE / 2, oz + at, 12, CHUNK_SIZE - 8, true, 0x4a4f55, 0.04);
-  }
+  paintRoads(group, cx, cz, 0x4a4f55);
+  const lots = blockLots(cx, cz);
+  const reserved = new Set();
+  if (cx === 0 && cz === 0) addOriginLandmarks(group, lots, reserved);
 
   const colors = [0xd8c7b0, 0xb9c4ce, 0xc9b8a6, 0x9aa7b2];
-  for (let i = 0; i < 5; i += 1) {
-    for (let j = 0; j < 5; j += 1) {
-      const x = ox + 28 + i * 46;
-      const z = oz + 28 + j * 46;
-      if (cx === 0 && cz === 0 && nearLandmark(x, z)) continue;
-      const n = chunkHash(cx, cz, i * 5 + j + 3);
-      const w = 14 + (n % 5) * 2;
-      const d = 12 + ((n >> 3) % 4) * 2;
-      const h = 18 + (n % 7) * 8;
-      addSolid(group, w, h, d, x, h / 2, z, colors[n % colors.length]);
-    }
+  lots.forEach((lot, index) => {
+    if (reserved.has(index)) return;
+    const n = chunkHash(cx, cz, index + 3);
+    const roomW = lot.spanX - 7;
+    const roomD = lot.spanZ - 7;
+    const w = Math.min(roomW, 12 + (n % 5) * 3);
+    const d = Math.min(roomD, 12 + ((n >> 3) % 4) * 3);
+    const h = 18 + (n % 7) * 8;
+    placeInLot(group, lot, w, h, d, colors[n % colors.length]);
+  });
+}
+
+function nearestLot(lots, x, z, used, minSpan) {
+  let best = -1;
+  let bestD = Infinity;
+  lots.forEach((lot, index) => {
+    if (used.has(index) || lot.spanX < minSpan || lot.spanZ < minSpan) return;
+    const d = (lot.cx - x) ** 2 + (lot.cz - z) ** 2;
+    if (d >= bestD) return;
+    bestD = d;
+    best = index;
+  });
+  return best;
+}
+
+function addOriginLandmarks(group, lots, reserved) {
+  const spire = nearestLot(lots, 22, 22, reserved, 20);
+  const hall = nearestLot(lots, 69, 69, reserved, 28);
+  const needle = nearestLot(lots, 127, 127, reserved, 20);
+  if (spire >= 0) {
+    reserved.add(spire);
+    const lot = lots[spire];
+    addSolid(group, 16, 48, 16, lot.cx, 24, lot.cz, 0x6e8ca0);
+    addSolid(group, 10, 26, 10, lot.cx, 61, lot.cz, 0x8eacbf);
+    addSolid(group, 5, 18, 5, lot.cx, 83, lot.cz, 0xd5e4ee);
   }
-
-  if (cx === 0 && cz === 0) addOriginLandmarks(group);
-}
-
-function nearLandmark(x, z) {
-  const spots = [[22, 22], [64, 48], [48, 96]];
-  return spots.some(([lx, lz]) => Math.hypot(x - lx, z - lz) < 30);
-}
-
-function addOriginLandmarks(group) {
-  addSolid(group, 16, 48, 16, 22, 24, 22, 0x6e8ca0);
-  addSolid(group, 10, 26, 10, 22, 61, 22, 0x8eacbf);
-  addSolid(group, 5, 18, 5, 22, 83, 22, 0xd5e4ee);
-  addSolid(group, 22, 14, 16, 64, 7, 48, 0xc47b5a);
-  addSolid(group, 8, 96, 8, 48, 48, 96, 0x44525c);
-  addSolid(group, 2, 14, 2, 48, 103, 96, 0xe8eef2);
+  if (hall >= 0) {
+    reserved.add(hall);
+    const lot = lots[hall];
+    addSolid(group, 22, 14, 16, lot.cx, 7, lot.cz, 0xc47b5a);
+  }
+  if (needle >= 0) {
+    reserved.add(needle);
+    const lot = lots[needle];
+    addSolid(group, 8, 96, 8, lot.cx, 48, lot.cz, 0x44525c);
+    addSolid(group, 2, 14, 2, lot.cx, 103, lot.cz, 0xe8eef2);
+  }
 }
 
 function buildSuburb(group, cx, cz, ox, oz) {
   addGround(group, ox, oz, 0x9cba78);
-  addRoad(group, ox + CHUNK_SIZE / 2, oz + 80, 10, CHUNK_SIZE - 16, true, 0x6a6258);
-  addRoad(group, ox + CHUNK_SIZE / 2, oz + 176, 10, CHUNK_SIZE - 16, true, 0x6a6258);
-  for (let i = 0; i < 4; i += 1) {
-    for (let j = 0; j < 4; j += 1) {
-      const n = chunkHash(cx, cz, i * 4 + j + 1);
-      const x = ox + 36 + i * 58;
-      const z = oz + 36 + j * 58;
-      if ((n % 5) === 0) {
-        addTree(group, x, z);
-        continue;
-      }
-      const w = 10 + (n % 3) * 2;
-      const d = 8 + ((n >> 2) % 3) * 2;
-      const h = 6 + (n % 4) * 2;
-      addSolid(group, w, h, d, x, h / 2, z, n % 2 === 0 ? 0xd7c4a3 : 0xc9b7a0);
-      if ((n % 3) === 0) addTree(group, x + 16, z + 10);
+  paintRoads(group, cx, cz, 0x6a6258);
+  blockLots(cx, cz).forEach((lot, index) => {
+    const n = chunkHash(cx, cz, index + 1);
+    if ((n % 5) === 0) {
+      addTree(group, lot.cx, lot.cz);
+      return;
     }
-  }
+    const roomW = lot.spanX - 8;
+    const roomD = lot.spanZ - 8;
+    const w = Math.min(roomW, 10 + (n % 3) * 2);
+    const d = Math.min(roomD, 8 + ((n >> 2) % 3) * 2);
+    const h = 6 + (n % 4) * 2;
+    placeInLot(group, lot, w, h, d, n % 2 === 0 ? 0xd7c4a3 : 0xc9b7a0);
+    if ((n % 3) === 0) {
+      const treeX = lot.cx + Math.min(6, lot.spanX * 0.2);
+      if (treeX < lot.x1 - 3) addTree(group, treeX, lot.cz);
+    }
+  });
 }
 
 function buildPark(group, cx, cz, ox, oz) {
   addGround(group, ox, oz, 0x6f9a55);
-  addRoad(group, ox + CHUNK_SIZE / 2, oz + CHUNK_SIZE / 2, 8, CHUNK_SIZE - 20, true, 0xc2b48a, 0.02);
-  addRoad(group, ox + CHUNK_SIZE / 2, oz + CHUNK_SIZE / 2, 8, CHUNK_SIZE - 20, false, 0xc2b48a, 0.025);
-  for (let i = 0; i < 18; i += 1) {
-    const n = chunkHash(cx, cz, i + 9);
-    const x = ox + 16 + (n % 220);
-    const z = oz + 16 + ((n >> 4) % 220);
-    addTree(group, x, z);
-  }
-  addSolid(group, 10, 5, 10, ox + 128, 2.5, oz + 128, 0xefe6d6);
+  paintRoads(group, cx, cz, 0xc2b48a);
+  const lots = blockLots(cx, cz);
+  lots.forEach((lot, index) => {
+    const roomX = Math.max(8, Math.floor(lot.spanX - 12));
+    const roomZ = Math.max(8, Math.floor(lot.spanZ - 12));
+    for (let i = 0; i < 3; i += 1) {
+      const n = chunkHash(cx, cz, index * 5 + i + 9);
+      const x = lot.x0 + 6 + (n % roomX);
+      const z = lot.z0 + 6 + ((n >> 4) % roomZ);
+      addTree(group, x, z);
+    }
+  });
+  const shelter = lots.find((lot) => lot.spanX > 30 && lot.spanZ > 30);
+  if (shelter) addSolid(group, 10, 5, 10, shelter.cx, 2.5, shelter.cz, 0xefe6d6);
 }
 
 function buildIndustrial(group, cx, cz, ox, oz) {
   addGround(group, ox, oz, 0x8d9286);
-  addRoad(group, ox + CHUNK_SIZE / 2, oz + 128, 18, CHUNK_SIZE - 10, true, 0x3e4450);
-  for (let row = 0; row < 3; row += 1) {
-    for (let col = 0; col < 2; col += 1) {
-      const n = chunkHash(cx, cz, row * 2 + col + 4);
-      const w = 78;
-      const d = 26;
-      const h = 8 + (n % 5) * 2;
-      const x = ox + 58 + col * 120;
-      const z = oz + 42 + row * 78;
-      addSolid(group, w, h, d, x, h / 2, z, 0x5c646b);
-      addSolid(group, w - 8, 2, d - 4, x, h + 1, z, 0x3a4046);
-    }
-  }
+  paintRoads(group, cx, cz, 0x3e4450);
+  blockLots(cx, cz).forEach((lot, index) => {
+    const n = chunkHash(cx, cz, index + 4);
+    const w = Math.min(lot.spanX - 12, (lot.spanX - 12) * 0.86);
+    const d = Math.min(lot.spanZ - 12, (lot.spanZ - 12) * 0.7);
+    const h = 8 + (n % 5) * 2;
+    const mesh = placeInLot(group, lot, w, h, d, 0x5c646b);
+    if (mesh) addSolid(group, Math.max(6, w - 8), 2, Math.max(6, d - 4), lot.cx, h + 1, lot.cz, 0x3a4046);
+  });
 }
 
 function buildWater(group, cx, cz, ox, oz) {

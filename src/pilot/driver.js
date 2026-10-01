@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { getCityColliders } from "../city/colliders.js";
+import { nearestRoadPoint, roadRoute } from "../city/roads.js";
 import { getGroundHeight } from "../city/terrain.js";
 import { resolveCollisions } from "../plane/collision.js";
 import { setFlightAudible } from "../plane/audio.js";
@@ -88,7 +89,7 @@ function forwardOf(yaw, target) {
 }
 
 function rightOf(yaw, target) {
-  return target.set(-Math.cos(yaw), 0, Math.sin(yaw));
+  return target.set(Math.cos(yaw), 0, -Math.sin(yaw));
 }
 
 function isRunning() {
@@ -151,7 +152,9 @@ export function createPilot(scene, plane) {
   driver.root.visible = false;
 
   let mode = "aboard";
-  let yaw = 0;
+  let lookYaw = 0;
+  let lookPitch = 0;
+  let bodyYaw = 0;
   let clock = 0;
   let vy = 0;
   let grounded = true;
@@ -164,6 +167,10 @@ export function createPilot(scene, plane) {
   const body = new THREE.Box3();
   const size = new THREE.Vector3(0.7, 1.7, 0.7);
   const center = new THREE.Vector3();
+  let route = [];
+  let routeCursor = 0;
+  let routeCooldown = 0;
+  const routeGoal = new THREE.Vector3();
   const drop = new THREE.Vector3();
   const taxi = buildTaxi();
   scene.add(taxi);
@@ -202,7 +209,7 @@ export function createPilot(scene, plane) {
     el.style.display = "";
     el.style.borderColor = "rgba(255,255,255,0.18)";
     if (mode === "chute") {
-      el.innerHTML = "<div><b>CHUTE</b></div><div>A/D slide the way you face</div>";
+      el.innerHTML = "<div><b>CHUTE</b></div><div>WASD drift · arrows look</div>";
       return;
     }
     if (ride === "dropoff") {
@@ -219,7 +226,7 @@ export function createPilot(scene, plane) {
         : away
           ? " · hold H to hail a taxi"
           : "";
-    el.innerHTML = `<div><b>ON FOOT</b></div><div>WASD ${pace} · Right Shift run · Space jump${near ? " · E get back in" : ""}${hailNote}</div>`;
+    el.innerHTML = `<div><b>ON FOOT</b></div><div>WASD ${pace} · arrows look · Right Shift run · Space jump${near ? " · E get back in" : ""}${hailNote}</div>`;
   }
 
   function shoveOutOfBuildings() {
@@ -250,9 +257,11 @@ export function createPilot(scene, plane) {
     if (mode !== "aboard") return;
     const ground = getGroundHeight(plane.position.x, plane.position.z);
     const inSky = plane.position.y > ground + SKY_CLEARANCE;
-    yaw = plane.rotation.y;
+    lookYaw = plane.rotation.y;
+    lookPitch = 0;
+    bodyYaw = lookYaw;
     driver.root.visible = true;
-    driver.root.rotation.y = yaw + Math.PI;
+    driver.root.rotation.y = bodyYaw + Math.PI;
     driver.chute.visible = inSky;
     if (inSky) {
       mode = "chute";
@@ -260,9 +269,9 @@ export function createPilot(scene, plane) {
     } else {
       mode = "walk";
       driver.root.position.set(
-        plane.position.x + Math.cos(yaw) * 3.2,
+        plane.position.x + Math.cos(lookYaw) * 3.2,
         ground,
-        plane.position.z + Math.sin(yaw) * 3.2,
+        plane.position.z + Math.sin(lookYaw) * 3.2,
       );
     }
     setFlightAudible(false);
@@ -281,19 +290,35 @@ export function createPilot(scene, plane) {
     setFlightAudible(true);
   }
 
+  function updateLook(delta) {
+    lookYaw += (held("ArrowLeft") - held("ArrowRight")) * 1.7 * delta;
+    lookPitch += (held("ArrowUp") - held("ArrowDown")) * 1.15 * delta;
+    lookPitch = Math.max(-0.65, Math.min(0.9, lookPitch));
+  }
+
+  function applyHeadLook() {
+    let diff = lookYaw - bodyYaw;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    driver.head.rotation.y = Math.max(-1.15, Math.min(1.15, diff));
+    driver.head.rotation.x = -lookPitch;
+  }
+
   function updateChute(delta) {
     clock += delta;
+    updateLook(delta);
     const ground = getGroundHeight(driver.root.position.x, driver.root.position.z);
     const drift = held("KeyW") - held("KeyS");
     const strafe = held("KeyD") - held("KeyA");
-    yaw += (held("KeyA") - held("KeyD")) * 1.1 * delta;
-    forwardOf(yaw, forward);
-    rightOf(yaw, right);
+    forwardOf(lookYaw, forward);
+    rightOf(lookYaw, right);
     driver.root.position.addScaledVector(forward, drift * 7 * delta);
     driver.root.position.addScaledVector(right, strafe * 5 * delta);
     driver.root.position.y -= 8 * delta;
-    driver.root.rotation.y = yaw + Math.PI;
+    bodyYaw = lookYaw;
+    driver.root.rotation.y = bodyYaw + Math.PI;
     poseChute(driver, clock);
+    applyHeadLook();
     if (driver.root.position.y > ground + 1.15) return;
     driver.root.position.y = ground;
     mode = "walk";
@@ -303,19 +328,36 @@ export function createPilot(scene, plane) {
   }
 
   function updateWalk(delta) {
-    const move = held("KeyW") - held("KeyS");
-    const turn = held("KeyA") - held("KeyD");
-    const run = isRunning() && move !== 0;
-    yaw += turn * 2.6 * delta;
-    clock += delta * (move === 0 ? 0 : run ? 1.45 : 1);
-    if (move !== 0) {
-      forwardOf(yaw, forward);
-      driver.root.position.addScaledVector(forward, move * (run ? 10.5 : 5.2) * delta);
+    updateLook(delta);
+    const fwd = held("KeyW") - held("KeyS");
+    const side = held("KeyD") - held("KeyA");
+    const mag = Math.hypot(fwd, side);
+    const run = isRunning() && mag > 0;
+    clock += delta * (mag === 0 ? 0 : run ? 1.45 : 1);
+    forwardOf(lookYaw, forward);
+    rightOf(lookYaw, right);
+    if (mag > 0) {
+      const scale = (run ? 10.5 : 5.2) * delta / mag;
+      driver.root.position.addScaledVector(forward, fwd * scale);
+      driver.root.position.addScaledVector(right, side * scale);
+      const wx = forward.x * fwd + right.x * side;
+      const wz = forward.z * fwd + right.z * side;
+      let target = Math.atan2(-wx, -wz);
+      let diff = target - bodyYaw;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      bodyYaw += diff * Math.min(1, 10 * delta);
+    } else {
+      let diff = lookYaw - bodyYaw;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      bodyYaw += diff * Math.min(1, 8 * delta);
     }
     const ground = getGroundHeight(driver.root.position.x, driver.root.position.z);
     if (grounded) driver.root.position.y = ground;
-    driver.root.rotation.y = yaw + Math.PI;
-    poseWalk(driver, clock, Math.abs(move) > 0 ? 1 : 0);
+    driver.root.rotation.y = bodyYaw + Math.PI;
+    poseWalk(driver, clock, mag > 0 ? 1 : 0);
+    applyHeadLook();
     shoveOutOfBuildings();
     const landed = getGroundHeight(driver.root.position.x, driver.root.position.z);
     if (!grounded) {
@@ -341,24 +383,97 @@ export function createPilot(scene, plane) {
     driver.armR.rotation.z = 0.2;
   }
 
+  function blockedAt(x, z) {
+    for (const building of getCityColliders()) {
+      if (x <= building.min.x - 1.15 || x >= building.max.x + 1.15) continue;
+      if (z <= building.min.z - 1.15 || z >= building.max.z + 1.15) continue;
+      return true;
+    }
+    return false;
+  }
+
   function driveToward(target, delta, speed) {
     const dx = target.x - taxi.position.x;
     const dz = target.z - taxi.position.z;
     const dist = Math.hypot(dx, dz);
     if (dist < 0.05) return dist;
     const step = Math.min(dist, speed * delta);
-    taxi.position.x += (dx / dist) * step;
-    taxi.position.z += (dz / dist) * step;
-    taxi.position.y = getGroundHeight(taxi.position.x, taxi.position.z);
-    taxi.rotation.y = Math.atan2(-dx, -dz) + Math.PI;
-    return dist - step;
+    let nx = taxi.position.x + (dx / dist) * step;
+    let nz = taxi.position.z + (dz / dist) * step;
+    if (blockedAt(nx, nz)) {
+      if (!blockedAt(nx, taxi.position.z)) nz = taxi.position.z;
+      else if (!blockedAt(taxi.position.x, nz)) nx = taxi.position.x;
+      else return dist;
+    }
+    const movedX = nx - taxi.position.x;
+    const movedZ = nz - taxi.position.z;
+    if (movedX * movedX + movedZ * movedZ < 1e-6) return dist;
+    taxi.position.x = nx;
+    taxi.position.z = nz;
+    taxi.position.y = getGroundHeight(nx, nz);
+    taxi.rotation.y = Math.atan2(-movedX, -movedZ) + Math.PI;
+    return Math.hypot(target.x - nx, target.z - nz);
+  }
+
+  function refreshRoute(goal, delta) {
+    routeCooldown -= delta;
+    const goalMoved = Math.hypot(goal.x - routeGoal.x, goal.z - routeGoal.z) > 10;
+    if (route.length > 0 && routeCooldown > 0 && !goalMoved) return;
+    routeCooldown = 0.45;
+    routeGoal.set(goal.x, goal.y, goal.z);
+    const path = roadRoute(taxi.position.x, taxi.position.z, goal.x, goal.z);
+    path.push({ x: goal.x, z: goal.z });
+    route = path;
+    routeCursor = 0;
+  }
+
+  function driveRoute(goal, delta, speed) {
+    const direct = Math.hypot(goal.x - taxi.position.x, goal.z - taxi.position.z);
+    const goalRoad = nearestRoadPoint(goal.x, goal.z);
+    const offRoad = goalRoad ? goalRoad.dist : 0;
+    if (direct < Math.max(14, offRoad + 5)) return driveToward(goal, delta, speed);
+    refreshRoute(goal, delta);
+    while (routeCursor < route.length - 1) {
+      const point = route[routeCursor];
+      if (Math.hypot(point.x - taxi.position.x, point.z - taxi.position.z) < 2.4) routeCursor += 1;
+      else break;
+    }
+    const point = route[Math.min(routeCursor, route.length - 1)];
+    return driveToward(point, delta, speed);
   }
 
   function callTaxi() {
     ride = "pickup";
-    forwardOf(yaw, forward);
-    const spawnX = driver.root.position.x - forward.x * 42;
-    const spawnZ = driver.root.position.z - forward.z * 42;
+    route = [];
+    routeCooldown = 0;
+    const near = nearestRoadPoint(driver.root.position.x, driver.root.position.z);
+    let spawnX = driver.root.position.x - Math.sin(lookYaw) * 42;
+    let spawnZ = driver.root.position.z - Math.cos(lookYaw) * 42;
+    if (near) {
+      const dx = near.seg.x2 - near.seg.x1;
+      const dz = near.seg.z2 - near.seg.z1;
+      const len = Math.hypot(dx, dz) || 1;
+      const sign = (near.x - driver.root.position.x) * dx + (near.z - driver.root.position.z) * dz >= 0 ? 1 : -1;
+      if (Math.abs(dx) >= Math.abs(dz)) {
+        spawnX = THREE.MathUtils.clamp(
+          near.x + (dx / len) * sign * 36,
+          Math.min(near.seg.x1, near.seg.x2),
+          Math.max(near.seg.x1, near.seg.x2),
+        );
+        spawnZ = near.z;
+      } else {
+        spawnX = near.x;
+        spawnZ = THREE.MathUtils.clamp(
+          near.z + (dz / len) * sign * 36,
+          Math.min(near.seg.z1, near.seg.z2),
+          Math.max(near.seg.z1, near.seg.z2),
+        );
+      }
+    }
+    if (blockedAt(spawnX, spawnZ) && near) {
+      spawnX = near.x;
+      spawnZ = near.z;
+    }
     taxi.position.set(spawnX, getGroundHeight(spawnX, spawnZ), spawnZ);
     taxi.visible = true;
   }
@@ -373,17 +488,33 @@ export function createPilot(scene, plane) {
   }
 
   function rememberDropoff() {
-    const side = Math.cos(plane.rotation.y) * 6;
-    const sideZ = Math.sin(plane.rotation.y) * 6;
-    drop.set(plane.position.x + side, 0, plane.position.z + sideZ);
+    for (const extra of [0, 0.9, -0.9, 1.7, -1.7, Math.PI]) {
+      const angle = plane.rotation.y + extra;
+      const x = plane.position.x + Math.cos(angle) * 6;
+      const z = plane.position.z + Math.sin(angle) * 6;
+      if (blockedAt(x, z)) continue;
+      drop.set(x, 0, z);
+      return;
+    }
+    drop.set(plane.position.x + 6, 0, plane.position.z);
   }
 
   function updateTaxi(delta) {
+    updateLook(delta);
     if (ride === "pickup") {
-      const dist = driveToward(driver.root.position, delta, 18);
+      driveRoute(driver.root.position, delta, 18);
       raiseHand();
-      if (dist < 3) {
+      const dist = Math.hypot(
+        taxi.position.x - driver.root.position.x,
+        taxi.position.z - driver.root.position.z,
+      );
+      const midBlocked = blockedAt(
+        (taxi.position.x + driver.root.position.x) / 2,
+        (taxi.position.z + driver.root.position.z) / 2,
+      );
+      if (dist < 4.2 || (dist < 8 && midBlocked)) {
         ride = "dropoff";
+        route = [];
         driver.root.visible = false;
         rememberDropoff();
       }
@@ -391,12 +522,14 @@ export function createPilot(scene, plane) {
     }
     if (ride !== "dropoff") return;
     if (!plane.userData.airborne) rememberDropoff();
-    const dist = driveToward(drop, delta, 24);
-    if (dist > 3.2) return;
+    driveRoute(drop, delta, 22);
+    const dist = Math.hypot(taxi.position.x - drop.x, taxi.position.z - drop.z);
+    if (dist > 3.6) return;
     driver.root.visible = true;
     driver.root.position.set(drop.x, getGroundHeight(drop.x, drop.z), drop.z);
     taxi.visible = false;
     ride = "none";
+    route = [];
     hail = 0;
     vy = 0;
     grounded = true;
@@ -440,16 +573,21 @@ export function createPilot(scene, plane) {
     },
     updateCamera(camera, delta) {
       const subject = ride === "dropoff" ? taxi : driver.root;
-      const focusYaw = ride === "dropoff" ? taxi.rotation.y + Math.PI : yaw;
       const back = mode === "chute" ? 8 : ride === "dropoff" ? 9 : 5.2;
-      const lift = mode === "chute" ? 4.2 : 3.2;
+      const hold = mode === "chute" ? 2.2 : 1.55;
       const desired = new THREE.Vector3(
-        subject.position.x + Math.sin(focusYaw) * back,
-        subject.position.y + lift,
-        subject.position.z + Math.cos(focusYaw) * back,
+        subject.position.x + Math.sin(lookYaw) * back,
+        subject.position.y + hold,
+        subject.position.z + Math.cos(lookYaw) * back,
       );
       camera.position.lerp(desired, 1 - Math.pow(0.0012, delta));
-      camera.lookAt(subject.position.x, subject.position.y + 1.2, subject.position.z);
+      const lookDist = 9;
+      const cosPitch = Math.cos(lookPitch);
+      camera.lookAt(
+        subject.position.x - Math.sin(lookYaw) * lookDist * cosPitch,
+        subject.position.y + 1.35 + Math.sin(lookPitch) * lookDist,
+        subject.position.z - Math.cos(lookYaw) * lookDist * cosPitch,
+      );
       camera.fov += (64 - camera.fov) * 0.12;
       camera.updateProjectionMatrix();
     },

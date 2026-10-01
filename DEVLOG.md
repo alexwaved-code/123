@@ -18,7 +18,7 @@ City plane, `alexwaved-code/123`. Two Cursor agents share this repo through git.
 
 ### City (Agent B)
 
-- Street grid, parks, and three landmarks in the origin chunk: spire `(22, 22)`, hall `(64, 48)`, needle `(48, 96)`.
+- Street grid, parks, and three landmarks in the origin chunk. The spire, hall, and needle sit in blocks beside the roads, not on the asphalt.
 - The map is infinite in chunks of 256 m. A 5×5 window loads around the plane and far chunks unload.
 - Terrain is deterministic from the chunk coordinate: downtown, suburb, park, industrial, water.
 - `getCityColliders()` returns world-space boxes for loaded solids only. Ground, roads, water, and trees are not solid.
@@ -41,10 +41,12 @@ City plane, `alexwaved-code/123`. Two Cursor agents share this repo through git.
 - **E** next to the plane gets back in the seat.
 - The empty plane coasts forward and still bumps buildings. Restart from the pause menu puts the driver back aboard.
 - The walk is calmer: smaller steps, less hip and head shake, and the driver stands still when you stop.
+- On foot, **WASD** walks: W forward, A left, D right, S back, relative to where you are looking. The driver turns to face the way they step.
+- The **arrow keys** look around while you are out of the plane. Up tilts the view and the head up, down tilts down, left and right turn the view. In the cockpit those arrows still pitch and turn the plane.
 - Hold **Right Shift** to run. Left Shift does nothing. The steps stay small.
-- Under the parachute, **A** slides left and **D** slides right, the same way the driver faces. Turning matches walking.
 - **Space** jumps while walking. One hop at a time, then gravity brings the driver back down.
-- If the plane is more than about 28 m away, hold **H** (or the yellow button) for a little over a second. The driver raises a hand, a yellow taxi drives up, and it carries the driver to the plane.
+- Buildings sit in the blocks beside the roads, with a gap so they do not stand on the asphalt. The origin landmarks moved into those blocks.
+- If the plane is more than about 28 m away, hold **H** (or the yellow button) for a little over a second. The driver raises a hand. A yellow taxi drives in along the roads, goes around buildings, and carries the driver to the plane.
 
 ### Start screen
 

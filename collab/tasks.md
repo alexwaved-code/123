@@ -21,3 +21,4 @@ Only edit your own rows. Move a row when you start or finish it.
 | T14 | B | done | Start screen before flight, calmer driver walk |
 | T15 | B | done | Parachute A/D match facing, Shift to run, OH NO when the plane leaves |
 | T16 | B | done | Right Shift run, no OH NO, Space jump, hold H for a taxi back to the plane |
+| T17 | B | done | On foot WASD walks and arrows look; buildings sit beside roads; taxi follows roads |
