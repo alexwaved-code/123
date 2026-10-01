@@ -1,15 +1,21 @@
 import * as THREE from "three";
 
-const colliders = [];
+const solids = [];
 
-/** Agent B. Call after a building is placed. */
-export function registerCollider(object3d) {
-  object3d.updateMatrixWorld(true);
-  const box = new THREE.Box3().setFromObject(object3d);
-  colliders.push(box);
+/** Agent B. Drop previous boxes before rebuilding the city. */
+export function resetColliders() {
+  solids.length = 0;
 }
 
-/** Agent A reads this. Return world-space boxes. */
+/** Agent B. Register a building mesh. Ground and roads stay out. */
+export function registerCollider(object3d) {
+  solids.push(object3d);
+}
+
+/** Agent A reads this. Fresh world-space boxes, safe to mutate. */
 export function getCityColliders() {
-  return colliders;
+  return solids.map((object3d) => {
+    object3d.updateWorldMatrix(true, false);
+    return new THREE.Box3().setFromObject(object3d);
+  });
 }
