@@ -19,31 +19,39 @@ function held(...codes) {
   return codes.some((code) => keys.has(code)) ? 1 : 0;
 }
 
-/** Agent A. Arcade flight. City code should not call this. */
-export function updateFlight(plane, delta) {
-  const yaw = held("KeyA", "ArrowLeft") - held("KeyD", "ArrowRight");
-  const climb = held("KeyR", "Space", "ArrowUp") - held("KeyF", "ControlLeft", "ControlRight", "ArrowDown");
-  const throttle = held("KeyW") - held("KeyS");
+function damp(current, target, lambda, delta) {
+  return THREE.MathUtils.damp(current, target, lambda, delta);
+}
 
-  plane.userData.speed = THREE.MathUtils.clamp(
-    plane.userData.speed + throttle * 22 * delta,
-    8,
-    78,
+/** Agent A. Arcade flight with a little inertia. City code should not call this. */
+export function updateFlight(plane, delta) {
+  const yawIn = held("KeyA", "ArrowLeft") - held("KeyD", "ArrowRight");
+  const climbIn = held("KeyR", "Space", "ArrowUp") - held("KeyF", "ControlLeft", "ControlRight", "ArrowDown");
+  const throttleIn = held("KeyW") - held("KeyS");
+
+  plane.userData.throttle = THREE.MathUtils.clamp(
+    (plane.userData.throttle ?? 0.32) + throttleIn * 0.55 * delta,
+    0,
+    1,
   );
 
-  plane.rotation.y += yaw * 1.35 * delta;
-  plane.position.y += climb * 24 * delta;
+  const wantSpeed = 9 + plane.userData.throttle * 69;
+  plane.userData.speed = damp(plane.userData.speed, wantSpeed, 1.8, delta);
+
+  const turnScale = THREE.MathUtils.lerp(1.7, 0.85, THREE.MathUtils.clamp((plane.userData.speed - 10) / 60, 0, 1));
+  plane.userData.yawRate = damp(plane.userData.yawRate ?? 0, yawIn * turnScale, 7, delta);
+  plane.userData.climbRate = damp(plane.userData.climbRate ?? 0, climbIn * 26, 6, delta);
+
+  plane.rotation.y += plane.userData.yawRate * delta;
+  plane.position.y += plane.userData.climbRate * delta;
 
   const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), plane.rotation.y);
   plane.position.addScaledVector(forward, plane.userData.speed * delta);
 
   const visual = plane.userData.visual;
   if (visual) {
-    visual.rotation.z = THREE.MathUtils.lerp(visual.rotation.z, yaw * 0.45, 1 - Math.pow(0.001, delta));
-    visual.rotation.x = THREE.MathUtils.lerp(visual.rotation.x, climb * -0.22, 1 - Math.pow(0.001, delta));
-  }
-  if (plane.userData.prop) {
-    plane.userData.prop.rotation.z += plane.userData.speed * 0.35 * delta;
+    visual.rotation.z = damp(visual.rotation.z, plane.userData.yawRate * 0.38, 8, delta);
+    visual.rotation.x = damp(visual.rotation.x, -plane.userData.climbRate * 0.012, 8, delta);
   }
 
   const hit = resolveCollisions(plane);
@@ -51,6 +59,7 @@ export function updateFlight(plane, delta) {
     speed: plane.userData.speed,
     altitude: plane.position.y,
     heading: THREE.MathUtils.radToDeg(plane.rotation.y),
+    throttle: plane.userData.throttle,
     hit,
   };
   updateHud(telemetry);

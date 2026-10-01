@@ -14,3 +14,4 @@ Only edit your own rows. Move a row when you start or finish it.
 | T8 | B | todo | Infinite chunk map: load/unload around the plane |
 | T9 | B | todo | Different terrain: downtown, suburb, park, industrial, water |
 | T10 | A | todo | After B exports `updateCity` + `getGroundHeight`, wire them from the plane |
+| T11 | A | done | Flying juice: inertia, camera, audio, clouds, lights, HUD |

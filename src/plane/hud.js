@@ -1,3 +1,5 @@
+let helpUntil = performance.now() + 9000;
+
 function ensureHud() {
   let el = document.getElementById("plane-hud");
   if (el) return el;
@@ -9,13 +11,16 @@ function ensureHud() {
     "left:16px",
     "bottom:16px",
     "z-index:5",
-    "min-width:220px",
-    "color:#102033",
-    "background:rgba(255,255,255,0.8)",
+    "min-width:228px",
+    "color:#eef6ff",
+    "background:rgba(8,16,28,0.55)",
     "padding:10px 12px",
+    "border:1px solid rgba(255,255,255,0.18)",
     "border-radius:8px",
-    "font:13px/1.45 ui-sans-serif,system-ui,sans-serif",
+    "font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace",
+    "letter-spacing:0.02em",
     "pointer-events:none",
+    "backdrop-filter:blur(6px)",
   ].join(";");
   document.body.appendChild(el);
 
@@ -30,15 +35,24 @@ function headingLabel(deg) {
   return `${names[Math.round(wrapped / 45) % 8]} ${wrapped.toFixed(0)}`;
 }
 
+function bar(value) {
+  const filled = Math.round(Math.min(1, Math.max(0, value)) * 12);
+  return "█".repeat(filled) + "░".repeat(12 - filled);
+}
+
 /** Agent A. */
 export function updateHud(telemetry) {
   const el = ensureHud();
-  const hit = telemetry.hit ? "  HIT" : "";
-  el.style.background = telemetry.hit ? "rgba(255,180,180,0.88)" : "rgba(255,255,255,0.8)";
+  const hit = telemetry.hit ? "  • IMPACT" : "";
+  el.style.borderColor = telemetry.hit ? "rgba(255,80,80,0.7)" : "rgba(255,255,255,0.18)";
+  const help = performance.now() < helpUntil
+    ? "<div style='opacity:.7;margin-top:6px'>W/S throttle · A/D turn · Space climb · click for engine</div>"
+    : "";
   el.innerHTML = [
-    `<b>SPD</b> ${telemetry.speed.toFixed(0)} m/s`,
-    `<b>ALT</b> ${telemetry.altitude.toFixed(0)} m`,
-    `<b>HDG</b> ${headingLabel(telemetry.heading)}${hit}`,
-    "W/S throttle · A/D or arrows turn · R/F or Space/Ctrl climb",
-  ].join("<br>");
+    `<div><b>IAS</b> ${telemetry.speed.toFixed(0)} m/s</div>`,
+    `<div><b>THR</b> ${bar(telemetry.throttle ?? 0)}</div>`,
+    `<div><b>ALT</b> ${telemetry.altitude.toFixed(0)} m</div>`,
+    `<div><b>HDG</b> ${headingLabel(telemetry.heading)}${hit}</div>`,
+    help,
+  ].join("");
 }

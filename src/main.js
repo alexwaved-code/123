@@ -3,6 +3,7 @@ import { SPAWN } from "./shared/constants.js";
 import { createPlane } from "./plane/createPlane.js";
 import { updateFlight } from "./plane/flight.js";
 import { createFollowCamera } from "./plane/followCamera.js";
+import { attachFlightJuice } from "./plane/juice.js";
 import { createCity } from "./city/createCity.js";
 
 const scene = new THREE.Scene();
@@ -31,16 +32,14 @@ plane.position.set(SPAWN.x, SPAWN.y, SPAWN.z);
 scene.add(plane);
 
 const updateCamera = createFollowCamera(camera, plane);
-const hud = document.getElementById("hud");
+const updateJuice = attachFlightJuice(scene, plane);
 const clock = new THREE.Clock();
 
 function frame() {
   const delta = Math.min(clock.getDelta(), 0.05);
   const telemetry = updateFlight(plane, delta);
-  updateCamera();
-  if (hud) {
-    hud.textContent = `spd ${telemetry.speed.toFixed(0)}  alt ${telemetry.altitude.toFixed(0)}  hdg ${telemetry.heading.toFixed(0)}   W/S throttle  A/D turn  R/F climb`;
-  }
+  updateCamera(delta, telemetry);
+  updateJuice(delta, telemetry);
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
