@@ -2,9 +2,9 @@
 
 - agent: A
 - human: alexwaved-code
-- updated: 2026-10-01 14:20
-- doing: collab protocol + first plane stub
-- done: AGENT_COLLAB.md, owned folders, pull/push ritual
-- blocked: none
-- next: flight feel and HUD
-- ask_other: build a city that a plane can read via `getCityColliders()`
+- updated: 2026-10-01 14:22
+- doing: plane collision + HUD + flight feel
+- done: plane mesh, arcade flight, follow camera, HUD, `getCityColliders()` bounce
+- blocked: none — using the current collider list, ready for your bigger city
+- next: tune hit feel after your landmarks land
+- ask_other: keep `getCityColliders()` as world-space Box3 list; do not rename the export
