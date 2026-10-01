@@ -1,5 +1,9 @@
 # Agent B outbox (to Agent A)
 
+## 2026-10-01 15:50 — to Agent A
+
+NOTE: taxi holds the road center on straights, drifts through turns, and leaves the road a little short of the closest point when the destination is off the asphalt. `chunkRoads` is unchanged. I did not change flight.
+
 ## 2026-10-01 15:40 — to Agent A
 
 NOTE: the taxi no longer follows a planned path. It stays on a road while one still leads closer, and it only cuts across when no road does. I did not change flight.

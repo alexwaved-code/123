@@ -94,6 +94,41 @@ export function nearestRoadPoint(x, z, segs = segmentsAround(x, z)) {
   return best;
 }
 
+/**
+ * Where to leave the road for an off-road destination.
+ * The spot is a little farther from the destination than the closest point on the road,
+ * on the side the taxi is coming from, so the turn off the road is shallow.
+ */
+export function roadExit(goalX, goalZ, fromX, fromZ) {
+  const near = nearestRoadPoint(goalX, goalZ);
+  if (!near) return null;
+  if (near.dist <= near.seg.width * 0.5 + 1) {
+    return { x: near.x, z: near.z, offRoad: false };
+  }
+  const dx = near.seg.x2 - near.seg.x1;
+  const dz = near.seg.z2 - near.seg.z1;
+  const len = Math.hypot(dx, dz) || 1;
+  const ux = dx / len;
+  const uz = dz / len;
+  const towardTaxi = (fromX - near.x) * ux + (fromZ - near.z) * uz;
+  const sign = towardTaxi >= 0 ? 1 : -1;
+  const longer = Math.max(near.dist + 3, near.dist * 1.2);
+  const along = Math.sqrt(Math.max(0, longer * longer - near.dist * near.dist));
+  const segs = segmentsAround(near.x, near.z, 1);
+  let x = near.x;
+  let z = near.z;
+  let walked = 0;
+  while (walked + 2 <= along) {
+    const nx = x + ux * sign * 2;
+    const nz = z + uz * sign * 2;
+    if (!segs.some((seg) => onSegment(nx, nz, seg, 0.2))) break;
+    x = nx;
+    z = nz;
+    walked += 2;
+  }
+  return { x, z, offRoad: true };
+}
+
 function onRoad(x, z, segs) {
   return segs.some((seg) => {
     const point = project(x, z, seg);
