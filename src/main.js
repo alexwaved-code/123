@@ -79,8 +79,9 @@ if (import.meta.hot) {
     document.getElementById("plane-hud")?.remove();
     document.getElementById("crash-banner")?.remove();
     document.getElementById("flight-overlay")?.remove();
-    document.querySelector(".game-menu")?.remove();
-    document.querySelector(".game-menu-button")?.remove();
+    document.getElementById("game-menu-root")?.remove();
+    document.getElementById("game-menu-open")?.remove();
+    document.getElementById("game-menu-style")?.remove();
     scene.clear();
   });
 }

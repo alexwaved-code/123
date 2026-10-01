@@ -54,8 +54,8 @@ function headingLabel(deg) {
 }
 
 function bar(value) {
-  const filled = Math.round(Math.min(1, Math.max(0, value)) * 12);
-  return "█".repeat(filled) + "░".repeat(12 - filled);
+  const filled = Math.round(Math.min(1, Math.max(0, value)) * 10);
+  return "[" + "#".repeat(filled) + "-".repeat(10 - filled) + "]";
 }
 
 function iasColor(speed, vsStall, vr) {
@@ -79,16 +79,16 @@ export function updateHud(telemetry) {
   const alignDeg = THREE_TO_DEG(telemetry.align ?? 0);
   const alignOk = (telemetry.align ?? 1) < 0.22;
   const help = telemetry.airborne
-    ? "W/S throttle · A/D turn · R/F pitch · G gear"
-    : "W throttle · S cut · F brake · R rotate after Vr · EN keys";
+    ? "W/S throttle  A/D turn  Up/Down pitch  G gear"
+    : "W throttle  S cut  Up rotate after Vr  Down brake";
 
   el.innerHTML = [
     `<div style="opacity:.65;letter-spacing:.12em">${telemetry.phase ?? ""}</div>`,
     `<div style="color:${ias}"><b>IAS</b> ${telemetry.speed.toFixed(0)} <span style="opacity:.6">Vr ${telemetry.vr ?? 28}  Vs ${telemetry.vsStall ?? 16}</span></div>`,
     `<div><b>THR</b> ${bar(telemetry.throttle ?? 0)}</div>`,
-    `<div><b>AGL</b> ${telemetry.altitude.toFixed(0)} m　　<b>VS</b> ${vsText} m/s</div>`,
-    `<div><b>HDG</b> ${headingLabel(telemetry.heading)}　　<b>GEAR</b> ${gear}</div>`,
-    `<div>${rwy}　align ${alignDeg.toFixed(0)}° ${alignOk ? "●" : "○"}</div>`,
+    `<div><b>AGL</b> ${telemetry.altitude.toFixed(0)} m    <b>VS</b> ${vsText} m/s</div>`,
+    `<div><b>HDG</b> ${headingLabel(telemetry.heading)}    <b>GEAR</b> ${gear}</div>`,
+    `<div>${rwy}  align ${alignDeg.toFixed(0)} deg ${alignOk ? "OK" : "--"}</div>`,
     `<div style="opacity:.62;margin-top:6px">${help}</div>`,
   ].join("");
 

@@ -10,8 +10,8 @@ const keys = new Set();
 const just = new Set();
 const keyAt = new Map();
 
-const CLIMB = ["KeyR", "Space", "ArrowUp", "Numpad8", "PageUp", "Equal", "NumpadAdd"];
-const DESCEND = ["KeyF", "KeyC", "ArrowDown", "Numpad2", "PageDown", "Minus", "NumpadSubtract"];
+const CLIMB = ["ArrowUp", "Numpad8"];
+const DESCEND = ["ArrowDown", "Numpad2"];
 const LEFT = ["KeyA", "ArrowLeft", "Numpad4"];
 const RIGHT = ["KeyD", "ArrowRight", "Numpad6"];
 const THROTTLE_UP = ["KeyW"];

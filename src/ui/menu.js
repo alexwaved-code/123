@@ -47,10 +47,15 @@ export function applyGraphics() {
  * onRestart should put the plane back at spawn.
  */
 export function createGameMenu({ scene, renderer, sun, onRestart }) {
+  document.getElementById("game-menu-style")?.remove();
+  document.getElementById("game-menu-open")?.remove();
+  document.getElementById("game-menu-root")?.remove();
+
   graphics = { scene, renderer, sun };
   const settings = getSettings();
 
   const style = document.createElement("style");
+  style.id = "game-menu-style";
   style.textContent = `
     .game-menu-button, .game-menu {
       font-family: ui-sans-serif, system-ui, sans-serif;
@@ -119,18 +124,30 @@ export function createGameMenu({ scene, renderer, sun, onRestart }) {
     .menu-field {
       align-items: center;
       justify-content: space-between;
+      gap: 12px;
       margin: 10px 0;
       font-size: 14px;
     }
-    .menu-field input[type="range"] { width: 150px; }
+    .menu-field > span { flex: 1; }
+    .menu-field input[type="range"] { width: 140px; }
+    .menu-field select {
+      min-width: 110px;
+      color: #102033;
+      background: #eef6ff;
+      border: 0;
+      border-radius: 6px;
+      padding: 6px 8px;
+    }
     .menu-hint { margin: 8px 0 0; font-size: 12px; color: rgba(238,246,255,0.62); }
   `;
   document.head.appendChild(style);
 
   const openButton = el("button", "game-menu-button", "Menu");
+  openButton.id = "game-menu-open";
   openButton.type = "button";
 
   const root = el("div", "game-menu");
+  root.id = "game-menu-root";
   root.setAttribute("role", "dialog");
   root.setAttribute("aria-modal", "true");
   root.setAttribute("aria-label", "Flight menu");
