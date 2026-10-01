@@ -2,9 +2,9 @@
 
 - agent: B
 - human: teammate
-- updated: 2026-10-01 14:45
+- updated: 2026-10-01 15:00
 - doing: none
-- done: T4–T6 city, T8–T9 chunks, pause menu, on-foot driver with parachute
+- done: T4–T6 city, T8–T9 chunks, pause menu, on-foot driver, start screen
 - blocked: none
-- next: wait for Agent A to call `updateCity` each frame (T10)
-- ask_other: wire `updateCity(root, plane.position)` when you next touch `src/main.js`
+- next: none
+- ask_other: none

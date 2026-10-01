@@ -1,4 +1,4 @@
-import { getSettings, isPaused, setPaused, updateSettings } from "./settings.js";
+import { getSettings, hasStarted, isPaused, markStarted, setPaused, updateSettings } from "./settings.js";
 import { setFlightAudible, setMasterVolume } from "../plane/audio.js";
 
 let graphics = null;
@@ -50,6 +50,7 @@ export function createGameMenu({ scene, renderer, sun, onRestart }) {
   document.getElementById("game-menu-style")?.remove();
   document.getElementById("game-menu-open")?.remove();
   document.getElementById("game-menu-root")?.remove();
+  document.getElementById("game-start-root")?.remove();
 
   graphics = { scene, renderer, sun };
   const settings = getSettings();
@@ -139,12 +140,56 @@ export function createGameMenu({ scene, renderer, sun, onRestart }) {
       padding: 6px 8px;
     }
     .menu-hint { margin: 8px 0 0; font-size: 12px; color: rgba(238,246,255,0.62); }
+    .game-start {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(6,14,24,0.55);
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      color: #eef6ff;
+    }
+    .game-start[hidden] { display: none; }
+    .game-start-panel {
+      width: min(440px, calc(100vw - 32px));
+      background: rgba(8,16,28,0.94);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 14px;
+      padding: 28px 26px 22px;
+      box-shadow: 0 18px 60px rgba(0,0,0,0.35);
+    }
+    .game-start-panel h1 {
+      margin: 0;
+      font-size: 36px;
+      letter-spacing: -0.03em;
+    }
+    .game-start-panel .eyebrow {
+      margin: 0 0 6px;
+      letter-spacing: 0.16em;
+      font-size: 12px;
+      color: rgba(238,246,255,0.62);
+    }
+    .game-start-panel p { margin: 10px 0 0; color: rgba(238,246,255,0.78); line-height: 1.45; }
+    .game-start-panel ul { margin: 14px 0 18px; padding-left: 18px; line-height: 1.6; }
+    .game-start-panel button {
+      width: 100%;
+      border: 0;
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 16px;
+      background: #d7ecff;
+      color: #102033;
+      cursor: pointer;
+    }
   `;
   document.head.appendChild(style);
 
   const openButton = el("button", "game-menu-button", "Menu");
   openButton.id = "game-menu-open";
   openButton.type = "button";
+  openButton.hidden = !hasStarted();
 
   const root = el("div", "game-menu");
   root.id = "game-menu-root";
@@ -205,7 +250,32 @@ export function createGameMenu({ scene, renderer, sun, onRestart }) {
     el("p", "menu-hint", "Esc opens and closes this menu."),
   );
   root.append(panel);
-  document.body.append(openButton, root);
+
+  const start = el("div", "game-start");
+  start.id = "game-start-root";
+  if (hasStarted()) start.hidden = true;
+  const startPanel = el("div", "game-start-panel");
+  const startButton = el("button", "", "Start flight");
+  startButton.type = "button";
+  startPanel.append(
+    el("p", "eyebrow", "RUNWAY 18"),
+    el("h1", "", "City plane"),
+    el("p", "", "Take off from the runway, fly the city, or step out and walk."),
+    Object.assign(document.createElement("ul"), {
+      innerHTML: "<li>W / S throttle</li><li>A / D turn</li><li>Up / Down pitch and brake</li><li>G gear</li><li>F leave the plane</li>",
+    }),
+    startButton,
+  );
+  start.append(startPanel);
+  document.body.append(openButton, root, start);
+
+  function begin() {
+    if (hasStarted()) return;
+    markStarted();
+    start.hidden = true;
+    openButton.hidden = false;
+    setMasterVolume(getSettings().volume);
+  }
 
   function syncPause(next) {
     setPaused(next);
@@ -221,6 +291,7 @@ export function createGameMenu({ scene, renderer, sun, onRestart }) {
   }
 
   openButton.addEventListener("click", toggle);
+  startButton.addEventListener("click", begin);
   resume.addEventListener("click", () => syncPause(false));
   restart.addEventListener("click", () => {
     onRestart();
@@ -248,7 +319,7 @@ export function createGameMenu({ scene, renderer, sun, onRestart }) {
   });
 
   window.addEventListener("keydown", (event) => {
-    if (event.code !== "Escape" || event.repeat) return;
+    if (!hasStarted() || event.code !== "Escape" || event.repeat) return;
     event.preventDefault();
     toggle();
   });

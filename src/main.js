@@ -8,7 +8,7 @@ import { updateFlight } from "./plane/flight.js";
 import { attachFlightJuice } from "./plane/juice.js";
 import { RUNWAY, SPAWN } from "./shared/constants.js";
 import { createGameMenu } from "./ui/menu.js";
-import { isPaused } from "./ui/settings.js";
+import { hasStarted, isPaused } from "./ui/settings.js";
 import { createPilot } from "./pilot/driver.js";
 
 const scene = new THREE.Scene();
@@ -59,7 +59,7 @@ const menu = createGameMenu({
 function frame() {
   requestAnimationFrame(frame);
   const delta = Math.min(clock.getDelta(), 0.05);
-  if (isPaused()) {
+  if (!hasStarted() || isPaused()) {
     renderer.render(scene, camera);
     return;
   }
@@ -93,6 +93,7 @@ if (import.meta.hot) {
     document.getElementById("game-menu-root")?.remove();
     document.getElementById("game-menu-open")?.remove();
     document.getElementById("game-menu-style")?.remove();
+    document.getElementById("game-start-root")?.remove();
     scene.clear();
   });
 }

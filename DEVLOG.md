@@ -40,6 +40,11 @@ City plane, `alexwaved-code/123`. Two Cursor agents share this repo through git.
 - The face points the way the driver moves. The camera stays behind, so W is forward and the eyes look away from the player.
 - **E** next to the plane gets back in the seat.
 - The empty plane coasts forward and still bumps buildings. Restart from the pause menu puts the driver back aboard.
+- The walk is calmer: smaller steps, less hip and head shake, and the driver stands still when you stop.
+
+### Start screen
+
+- The flight waits on a start screen: title, runway, and the control list. **Start flight** begins the simulation. Esc and the Menu button stay hidden until then.
 
 ## World rules still in force
 

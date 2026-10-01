@@ -9,6 +9,7 @@ const defaults = {
 };
 
 let paused = false;
+let started = false;
 let settings = load();
 
 function load() {
@@ -46,6 +47,15 @@ export function updateSettings(partial) {
   if (partial.volume != null) settings.volume = clamp(partial.volume, 0, 1, defaults.volume);
   persist();
   return settings;
+}
+
+export function hasStarted() {
+  return started;
+}
+
+export function markStarted() {
+  started = true;
+  return started;
 }
 
 export function isPaused() {

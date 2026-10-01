@@ -3,7 +3,7 @@ import { getCityColliders } from "../city/colliders.js";
 import { getGroundHeight } from "../city/terrain.js";
 import { resolveCollisions } from "../plane/collision.js";
 import { setFlightAudible } from "../plane/audio.js";
-import { getSettings, isPaused } from "../ui/settings.js";
+import { getSettings, hasStarted, isPaused } from "../ui/settings.js";
 
 const SKY_CLEARANCE = 12;
 const keys = new Set();
@@ -92,31 +92,31 @@ function rightOf(yaw, target) {
 }
 
 function poseWalk(driver, time, amount) {
-  const swing = Math.sin(time * 16);
-  const flap = Math.cos(time * 16);
-  driver.legL.rotation.x = swing * 1.5 * amount;
-  driver.legR.rotation.x = -swing * 1.5 * amount;
-  driver.armL.rotation.x = -swing * 1.35 * amount;
-  driver.armR.rotation.x = swing * 1.35 * amount;
-  driver.armL.rotation.z = 0.55 + flap * 0.9 * amount;
-  driver.armR.rotation.z = -0.55 - flap * 0.9 * amount;
-  driver.hips.rotation.z = swing * 0.42 * amount;
-  driver.hips.rotation.y = swing * 0.28 * amount;
-  driver.hips.position.y = 0.95 + Math.abs(swing) * 0.32 * amount;
-  driver.head.rotation.z = -swing * 0.55 * amount;
-  driver.head.rotation.x = Math.abs(flap) * 0.25 * amount;
+  const swing = Math.sin(time * 7);
+  const flap = Math.cos(time * 7);
+  driver.legL.rotation.x = swing * 0.55 * amount;
+  driver.legR.rotation.x = -swing * 0.55 * amount;
+  driver.armL.rotation.x = -swing * 0.4 * amount;
+  driver.armR.rotation.x = swing * 0.4 * amount;
+  driver.armL.rotation.z = 0.08 + flap * 0.12 * amount;
+  driver.armR.rotation.z = -0.08 - flap * 0.12 * amount;
+  driver.hips.rotation.z = swing * 0.08 * amount;
+  driver.hips.rotation.y = swing * 0.04 * amount;
+  driver.hips.position.y = 0.95 + Math.abs(swing) * 0.04 * amount;
+  driver.head.rotation.z = -swing * 0.05 * amount;
+  driver.head.rotation.x = 0.02 * amount;
 }
 
 function poseChute(driver, time) {
   const swing = Math.sin(time * 3.2);
-  driver.legL.rotation.x = 0.55 + swing * 0.45;
-  driver.legR.rotation.x = 0.55 - swing * 0.45;
-  driver.armL.rotation.set(-2.5, 0, 0.25);
-  driver.armR.rotation.set(-2.5, 0, -0.25);
-  driver.hips.rotation.set(0.15, 0, swing * 0.35);
+  driver.legL.rotation.x = 0.25 + swing * 0.18;
+  driver.legR.rotation.x = 0.25 - swing * 0.18;
+  driver.armL.rotation.set(-2.2, 0, 0.12);
+  driver.armR.rotation.set(-2.2, 0, -0.12);
+  driver.hips.rotation.set(0.08, 0, swing * 0.1);
   driver.hips.position.y = 0.95;
-  driver.head.rotation.set(0.2, 0, swing * 0.4);
-  driver.chute.rotation.z = swing * 0.18;
+  driver.head.rotation.set(0.08, 0, swing * 0.08);
+  driver.chute.rotation.z = swing * 0.06;
 }
 
 /** On-foot driver. F leaves the plane. E gets back in when standing next to it. */
@@ -232,13 +232,13 @@ export function createPilot(scene, plane) {
     const ground = getGroundHeight(driver.root.position.x, driver.root.position.z);
     driver.root.position.y = ground;
     driver.root.rotation.y = yaw + Math.PI;
-    poseWalk(driver, clock, Math.abs(move) > 0 ? 1 : 0.35);
+    poseWalk(driver, clock, Math.abs(move) > 0 ? 1 : 0);
     shoveOutOfBuildings();
     driver.root.position.y = getGroundHeight(driver.root.position.x, driver.root.position.z);
   }
 
   window.addEventListener("keydown", (event) => {
-    if (event.repeat || isPaused() || event.isComposing) return;
+    if (event.repeat || !hasStarted() || isPaused() || event.isComposing) return;
     if (event.code === "KeyF" && mode === "aboard") exit();
     if (event.code === "KeyE" && mode === "walk" && driver.root.position.distanceTo(plane.position) < 8) board();
   });
