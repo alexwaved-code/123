@@ -21,7 +21,13 @@ export function resetPlane(plane) {
   plane.userData.crashReason = "";
   plane.userData.hit = false;
   plane.userData.snapCamera = true;
-  if (plane.userData.gear) plane.userData.gear.visible = true;
+  if (plane.userData.gear) {
+    plane.userData.gear.visible = true;
+    plane.userData.gear.userData.retract = 0;
+    plane.userData.gear.rotation.x = 0;
+    plane.userData.gear.position.y = 0;
+  }
+  plane.userData.gearAuto = false;
 }
 
 export function crashPlane(plane, reason) {

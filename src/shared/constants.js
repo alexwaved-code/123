@@ -18,7 +18,11 @@ export const METERS = 1;
 export const VS = 14;
 export const VR = 18;
 export const VREF = 20;
-export const GRAVITY = 19;
+export const V_CRUISE = 32;
+export const GRAVITY = 9.81;
+export const KT = 1.94384;
+export const FT = 3.28084;
+export const FPM = 196.85;
 
 export function onRunway(x, z) {
   return Math.abs(x - RUNWAY.x) <= RUNWAY.width * 0.5 + 1 && z >= RUNWAY.z0 && z <= RUNWAY.z1;

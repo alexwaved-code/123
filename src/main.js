@@ -88,6 +88,7 @@ if (import.meta.hot) {
     renderer.dispose();
     renderer.domElement.remove();
     document.getElementById("plane-hud")?.remove();
+    document.getElementById("pfd-style")?.remove();
     document.getElementById("crash-banner")?.remove();
     document.getElementById("flight-overlay")?.remove();
     document.getElementById("game-menu-root")?.remove();

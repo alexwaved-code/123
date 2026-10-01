@@ -11,6 +11,8 @@ City plane, `alexwaved-code/123`. Two Cursor agents share this repo through git.
 
 ### Plane (Agent A)
 
+- A heading-up nav inset sits on the flight HUD. It paints B's terrain chunks and roads, runway 18, and downtown. Range is 1.4 km.
+
 - Arcade flight with inertia, throttle, yaw, and climb. Windows keys: **W/S** throttle, **A/D** turn, **R/F** climb. Space and the arrow keys were climbing into the IME, so climb stays on R/F.
 - HUD shows speed, throttle, altitude, and heading.
 - Buildings push the plane out instead of letting it pass through.

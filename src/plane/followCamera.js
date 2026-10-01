@@ -15,8 +15,9 @@ export function createFollowCamera(camera, plane) {
 
     const speed = plane.userData.speed ?? 0;
     const grounded = !plane.userData.airborne;
-    const back = grounded ? 8.5 : 10.5 + speed * 0.07;
-    const height = grounded ? 2.4 : 3.4 + speed * 0.025;
+    const flare = !grounded && (telemetry.altitude ?? 99) < 22;
+    const back = grounded ? 8.5 : flare ? 9.2 : 10.8 + speed * 0.05;
+    const height = grounded ? 2.4 : flare ? 2.7 : 3.2 + speed * 0.02;
     const yaw = plane.rotation.y;
     desired.set(
       plane.position.x + Math.sin(yaw) * back,
@@ -49,7 +50,7 @@ export function createFollowCamera(camera, plane) {
       camera.rotateZ(-(plane.userData.visual?.rotation.z ?? 0) * 0.55);
     }
 
-    const wantFov = telemetry.crashed ? 62 : 67 + speed * 0.24;
+    const wantFov = telemetry.crashed ? 60 : 64 + speed * 0.08;
     camera.fov += (wantFov - camera.fov) * 0.08;
     camera.updateProjectionMatrix();
   };

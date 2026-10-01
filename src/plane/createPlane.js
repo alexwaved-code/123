@@ -70,17 +70,21 @@ export function createPlane() {
 
   const gear = new THREE.Group();
   gear.name = "gear";
-  const wheelMat = mat(0x1a1a1a, { roughness: 0.9 });
-  const wheels = [
-    [0, -0.62, -1.6],
-    [-0.85, -0.62, 0.9],
-    [0.85, -0.62, 0.9],
+  gear.userData.retract = 0;
+  const wheelMat = mat(0x1a1a1a, { roughness: 0.92 });
+  const strutMat = mat(0x4a515a, { metalness: 0.45, roughness: 0.35 });
+  const stations = [
+    [0, -1.02, -1.55],
+    [-0.92, -1.02, 0.88],
+    [0.92, -1.02, 0.88],
   ];
-  for (const [x, y, z] of wheels) {
+  for (const [x, y, z] of stations) {
+    const strut = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.72, 0.07), strutMat);
+    strut.position.set(x, y + 0.42, z);
     const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.16, 10), wheelMat);
     wheel.rotation.z = Math.PI / 2;
     wheel.position.set(x, y, z);
-    gear.add(wheel);
+    gear.add(strut, wheel);
   }
   visual.add(gear);
 

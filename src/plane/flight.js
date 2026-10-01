@@ -1,10 +1,12 @@
 import * as THREE from "three";
 import { getGroundHeight } from "../city/createCity.js";
-import { GEAR_HEIGHT, GRAVITY, RUNWAY, VREF, VR, VS } from "../shared/constants.js";
+import { GEAR_HEIGHT, VREF, VR, VS } from "../shared/constants.js";
 import { onRunway, runwayAlign } from "./airport.js";
 import { resolveCollisions } from "./collision.js";
-import { crashPlane, resetPlane } from "./crash.js";
+import { resetPlane } from "./crash.js";
 import { updateHud } from "./hud.js";
+import { handleContact } from "./landing.js";
+import { ensureSplash, isWater, trickleSplash, updateSplash } from "./water.js";
 
 const keys = new Set();
 const just = new Set();
@@ -77,116 +79,128 @@ function wrapHeading(rad) {
   return THREE.MathUtils.radToDeg(((rad % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2));
 }
 
-function phaseOf(plane, agl, rwy, align) {
-  if (plane.userData.crashed) return "CRASH";
+function phaseOf(plane, agl, rwy, water) {
+  if (plane.userData.crashed) {
+    return plane.userData.crashReason?.includes("water") || plane.userData.crashReason === "ditched" ? "DITCH" : "CRASH";
+  }
+  if (water && !plane.userData.airborne) return "WATER";
   if (!plane.userData.airborne && plane.userData.speed < 2) return "HOLD";
-  if (!plane.userData.airborne && plane.userData.speed < VR) return "TAKEOFF ROLL";
+  if (!plane.userData.airborne && plane.userData.speed < VR) return "T/O ROLL";
   if (!plane.userData.airborne) return "ROTATE";
-  if (agl > 80) return "CRUISE";
-  if (plane.userData.vs < -1.2 && agl < 70) return "APPROACH";
-  if (agl < 12 && plane.userData.vs < 0) return "FLARE";
-  if (rwy && align < 0.4) return "CLIMB";
-  return "CLIMB";
+  if (agl < 16 && plane.userData.vs < 0) return "FLARE";
+  if (agl < 90 && plane.userData.vs < -0.6) return "APP";
+  if (agl > 140) return "CRZ";
+  return "CLB";
 }
 
-function touchDown(plane, aglFloor, rwy, align) {
-  const sink = -plane.userData.vs;
-  if (!plane.userData.gearDown) {
-    crashPlane(plane, "gear-up landing");
-    return;
-  }
-  if (!rwy && plane.userData.speed > 10) {
-    crashPlane(plane, "off-runway landing");
-    return;
-  }
-  if (sink > 9) {
-    crashPlane(plane, "hard landing");
-    return;
-  }
-  if (rwy && align > 0.55 && plane.userData.speed > 16) {
-    crashPlane(plane, "runway excursion");
-    return;
-  }
-  plane.userData.airborne = false;
-  plane.userData.vs = 0;
-  plane.userData.pitchAtt = 0;
-  plane.position.y = aglFloor;
-  if (sink > 5) plane.userData.speed *= 0.72;
+function updateGearVisual(plane, delta) {
+  const gear = plane.userData.gear;
+  if (!gear) return;
+  const want = plane.userData.gearDown ? 0 : 1;
+  gear.userData.retract = damp(gear.userData.retract ?? 0, want, 4.8, delta);
+  gear.rotation.x = gear.userData.retract * 1.45;
+  gear.position.y = gear.userData.retract * 0.55;
+  gear.visible = gear.userData.retract < 0.94;
 }
 
-/** Agent A. Takeoff, flight, landing, crash. */
+function deckHeight(plane, groundY, water) {
+  if (water) return groundY + 0.35;
+  return groundY + (plane.userData.gearDown ? GEAR_HEIGHT : 0.42);
+}
+
+/** Agent A. Nose sets flight path; stick-center holds altitude. */
 export function updateFlight(plane, delta) {
-  if (tapped("Enter") || tapped("NumpadEnter")) {
-    resetPlane(plane);
-  }
-  if (tapped("KeyG") && !plane.userData.crashed && plane.userData.airborne) {
-    plane.userData.gearDown = !plane.userData.gearDown;
-    if (plane.userData.gear) plane.userData.gear.visible = plane.userData.gearDown;
-  }
+  if (plane.parent) ensureSplash(plane.parent);
+  updateSplash(delta);
+
+  if (tapped("Enter") || tapped("NumpadEnter")) resetPlane(plane);
 
   const yawIn = held(LEFT) - held(RIGHT);
   const climbIn = held(CLIMB) - held(DESCEND);
   const throttleIn = held(THROTTLE_UP) - held(THROTTLE_DOWN);
   const groundY = getGroundHeight(plane.position.x, plane.position.z);
-  const deck = groundY + (plane.userData.gearDown ? GEAR_HEIGHT : 0.55);
+  const water = isWater(plane.position.x, plane.position.z);
   const rwy = onRunway(plane.position.x, plane.position.z);
   const align = runwayAlign(plane.rotation.y);
+  const agl = plane.position.y - groundY;
+  const deck = deckHeight(plane, groundY, water);
+
+  if (tapped("KeyG") && !plane.userData.crashed) {
+    if (plane.userData.airborne) plane.userData.gearDown = !plane.userData.gearDown;
+    else if (plane.userData.speed < 1 && plane.userData.gearDown) plane.userData.gearDown = false;
+    plane.userData.gearAuto = false;
+  }
+  if (plane.userData.airborne && agl < 30 && plane.userData.vs < 0 && !plane.userData.gearDown) {
+    plane.userData.gearDown = true;
+    plane.userData.gearAuto = true;
+  }
 
   if (plane.userData.crashed) {
     plane.userData.speed = damp(plane.userData.speed, 0, 4, delta);
-    const telemetry = readTelemetry(plane, rwy, align, 0);
+    if (water && plane.userData.speed > 1.5) trickleSplash(plane.position, plane.userData.speed);
+    updateGearVisual(plane, delta);
+    const telemetry = readTelemetry(plane, rwy, align, climbIn, water, agl);
     updateHud(telemetry);
     just.clear();
     return telemetry;
   }
 
   plane.userData.throttle = THREE.MathUtils.clamp(
-    (plane.userData.throttle ?? 0) + throttleIn * 0.45 * delta,
+    (plane.userData.throttle ?? 0) + throttleIn * 0.38 * delta,
     0,
     1,
   );
 
   if (!plane.userData.airborne) {
     const brake = held(DESCEND) * 16;
-    const roll = plane.userData.throttle * 48 - plane.userData.speed * 0.35 - brake;
+    const surface = water ? 18 : rwy ? 0.35 : 1.4;
+    const roll = plane.userData.throttle * 5.4 - plane.userData.speed * 0.14 - brake - surface;
     plane.userData.speed = Math.max(0, plane.userData.speed + roll * delta);
-    const taxiTurn = THREE.MathUtils.lerp(1.05, 0.28, THREE.MathUtils.clamp(plane.userData.speed / 40, 0, 1));
+    const taxiTurn = THREE.MathUtils.lerp(1.05, 0.2, THREE.MathUtils.clamp(plane.userData.speed / 42, 0, 1));
     plane.userData.yawRate = damp(plane.userData.yawRate, yawIn * taxiTurn, 8, delta);
     plane.rotation.y += plane.userData.yawRate * delta;
-
-    const canRotate = plane.userData.speed >= VR && (rwy || Math.abs(plane.position.x - RUNWAY.x) < 80);
-    plane.userData.pitchAtt = damp(plane.userData.pitchAtt, canRotate ? Math.max(0, climbIn) * 0.28 : 0, 10, delta);
+    const canRotate = !water && plane.userData.gearDown && plane.userData.speed >= VR;
+    plane.userData.pitchAtt = damp(plane.userData.pitchAtt, canRotate ? Math.max(0, climbIn) * 0.24 : 0, 9, delta);
     if (canRotate && climbIn > 0) {
       plane.userData.airborne = true;
-      plane.userData.vs = 4.2;
-      plane.userData.pitchAtt = Math.max(plane.userData.pitchAtt, 0.22);
+      plane.userData.vs = 2.15;
+      plane.userData.pitchAtt = Math.max(plane.userData.pitchAtt, 0.14);
+      plane.userData.gearAuto = false;
     } else {
       plane.position.y = deck;
       plane.userData.vs = 0;
     }
+    if (water && plane.userData.speed > 2) trickleSplash(plane.position, plane.userData.speed);
   } else {
-    const turnScale = THREE.MathUtils.lerp(1.55, 0.8, THREE.MathUtils.clamp((plane.userData.speed - 12) / 55, 0, 1));
-    plane.userData.yawRate = damp(plane.userData.yawRate, yawIn * turnScale, 7, delta);
+    const turnScale = THREE.MathUtils.lerp(1.2, 0.62, THREE.MathUtils.clamp((plane.userData.speed - 14) / 48, 0, 1));
+    plane.userData.yawRate = damp(plane.userData.yawRate, yawIn * turnScale, 5.2, delta);
     plane.rotation.y += plane.userData.yawRate * delta;
     plane.userData.pitchAtt = THREE.MathUtils.clamp(
-      damp(plane.userData.pitchAtt, climbIn * 0.32, 10, delta),
-      -0.42,
-      0.48,
+      damp(plane.userData.pitchAtt, climbIn * 0.3, 4.4, delta),
+      -0.4,
+      0.38,
     );
 
-    const stall = Math.max(0, (VS - plane.userData.speed) / VS);
-    const lift = (plane.userData.speed / VS) ** 2 * (0.2 + plane.userData.pitchAtt * 1.45);
-    const accelY = lift * GRAVITY - GRAVITY - stall * 16;
-    plane.userData.vs += accelY * delta;
-    plane.userData.vs *= 1 - 0.35 * delta;
+    const stallFrac = THREE.MathUtils.clamp((VS - plane.userData.speed) / 6, 0, 1);
+    const path = plane.userData.pitchAtt * (1 - stallFrac * 0.65);
+    let targetVs = Math.sin(path) * plane.userData.speed;
+    targetVs -= stallFrac * 15;
+    targetVs -= Math.abs(plane.userData.yawRate) * 1.05;
+    if (agl < 12 && targetVs < 0) {
+      targetVs *= 0.42 + (agl / 12) * 0.58;
+    }
+    plane.userData.vs = damp(plane.userData.vs, targetVs, 2.7, delta);
     plane.position.y += plane.userData.vs * delta;
 
-    const drag = 0.42 + Math.abs(plane.userData.pitchAtt) * 0.25 + (plane.userData.gearDown ? 0.12 : 0);
-    plane.userData.speed += (plane.userData.throttle * 40 - drag * plane.userData.speed) * delta;
-    plane.userData.speed = THREE.MathUtils.clamp(plane.userData.speed, 6, 82);
+    const q = plane.userData.speed * plane.userData.speed;
+    const drag = 0.0136 * q + Math.abs(plane.userData.pitchAtt) * 8 + (plane.userData.gearDown ? 3.2 : 0.4);
+    const thrust = plane.userData.throttle * 22;
+    plane.userData.speed += (thrust - drag - plane.userData.vs * 2.4) * delta;
+    plane.userData.speed = THREE.MathUtils.clamp(plane.userData.speed, 0, 52);
 
-    if (plane.position.y <= deck + 0.04 && plane.userData.vs <= 0.4) {
-      touchDown(plane, deck, rwy, align);
+    if (plane.position.y <= deck + 0.06) {
+      if (plane.userData.vs <= 1.55) handleContact(plane, groundY, rwy, align);
+      else plane.position.y = deck;
     }
   }
 
@@ -194,41 +208,59 @@ export function updateFlight(plane, delta) {
   plane.position.addScaledVector(forward, plane.userData.speed * delta);
 
   const visual = plane.userData.visual;
-  if (visual) {
-    visual.rotation.x = damp(visual.rotation.x, plane.userData.pitchAtt, 8, delta);
-    visual.rotation.z = damp(visual.rotation.z, plane.userData.yawRate * 0.38, 8, delta);
+  if (visual && !plane.userData.crashed) {
+    visual.rotation.x = damp(visual.rotation.x, plane.userData.pitchAtt, 6.2, delta);
+    visual.rotation.z = damp(visual.rotation.z, plane.userData.yawRate * 0.48, 6.2, delta);
   }
   plane.userData.pitch = visual?.rotation.x ?? 0;
   plane.userData.climbRate = plane.userData.vs;
+  updateGearVisual(plane, delta);
 
   resolveCollisions(plane);
   if (!plane.userData.airborne && !plane.userData.crashed) {
-    plane.position.y = getGroundHeight(plane.position.x, plane.position.z) + GEAR_HEIGHT;
+    plane.position.y = deckHeight(plane, getGroundHeight(plane.position.x, plane.position.z), water);
   }
-  const telemetry = readTelemetry(plane, rwy, align, climbIn);
+
+  const telemetry = readTelemetry(plane, rwy, align, climbIn, water, Math.max(0, plane.position.y - groundY));
   updateHud(telemetry);
   just.clear();
   return telemetry;
 }
 
-function readTelemetry(plane, rwy, align, climbIn) {
+function readTelemetry(plane, rwy, align, climbIn, water, agl) {
+  const sink = Math.max(0, -(plane.userData.vs ?? 0));
+  const warns = [];
+  if (plane.userData.speed < VS && plane.userData.airborne) warns.push("STALL");
+  if (plane.userData.airborne && agl < 140 && !plane.userData.gearDown && (plane.userData.vs ?? 0) < 0) {
+    warns.push("TOO LOW GEAR");
+  }
+  if (plane.userData.airborne && sink > 8 && agl < 100) warns.push("SINK RATE");
+  if (plane.userData.airborne && !rwy && agl < 36 && sink > 3) warns.push("TERRAIN");
+  if (water && plane.userData.airborne && agl < 50) warns.push("WATER");
+  if (plane.userData.gearAuto) warns.push("GEAR AUTO");
   return {
     speed: plane.userData.speed,
-    altitude: Math.max(0, plane.position.y - getGroundHeight(plane.position.x, plane.position.z)),
+    altitude: Math.max(0, agl - (plane.userData.gearDown ? GEAR_HEIGHT : 0.42)),
     heading: wrapHeading(plane.rotation.y),
     throttle: plane.userData.throttle,
     vs: plane.userData.vs ?? 0,
+    pitch: plane.userData.pitchAtt ?? 0,
+    bank: plane.userData.visual?.rotation.z ?? 0,
     gearDown: plane.userData.gearDown,
     airborne: plane.userData.airborne,
     onRunway: rwy,
+    water,
     align,
-    phase: phaseOf(plane, plane.position.y - getGroundHeight(plane.position.x, plane.position.z), rwy, align),
+    phase: phaseOf(plane, agl, rwy, water),
     crashed: plane.userData.crashed,
     crashReason: plane.userData.crashReason,
     hit: plane.userData.hit || plane.userData.crashed,
     vr: VR,
     vsStall: VS,
     vref: VREF,
+    warns,
     rotateHint: !plane.userData.airborne && plane.userData.speed >= VR && climbIn >= 0,
+    x: plane.position.x,
+    z: plane.position.z,
   };
 }

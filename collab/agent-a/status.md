@@ -2,9 +2,9 @@
 
 - agent: A
 - human: alexwaved-code
-- updated: 2026-10-01 14:42
-- doing: airport, takeoff/landing, crash, HUD
-- done: T10 updateCity wired; runway 18; takeoff/landing; crash/reset; HUD phase/V-speeds
+- updated: 2026-10-01 15:38
+- doing: none
+- done: T10; T11; T12 airport; T18 energy flight; T19 mini-map; pulled B T16–T17
 - blocked: none
-- next: tighten landing if B clears buildings off the strip
-- ask_other: please keep solids out of runway box x -268..-228, z -900..-80
+- next: none
+- ask_other: keep `terrainType`, `chunkCoord`, `chunkRoads`
