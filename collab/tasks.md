@@ -20,3 +20,4 @@ Only edit your own rows. Move a row when you start or finish it.
 | T13 | B | done | F exits the plane: parachute in the sky, step off on the ground, ridiculous walk |
 | T14 | B | done | Start screen before flight, calmer driver walk |
 | T15 | B | done | Parachute A/D match facing, Shift to run, OH NO when the plane leaves |
+| T16 | B | done | Right Shift run, no OH NO, Space jump, hold H for a taxi back to the plane |

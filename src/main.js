@@ -94,6 +94,7 @@ if (import.meta.hot) {
     document.getElementById("game-menu-open")?.remove();
     document.getElementById("game-menu-style")?.remove();
     document.getElementById("game-start-root")?.remove();
+    document.getElementById("hail-taxi")?.remove();
     scene.clear();
   });
 }
