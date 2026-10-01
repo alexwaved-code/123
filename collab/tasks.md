@@ -11,3 +11,6 @@ Only edit your own rows. Move a row when you start or finish it.
 | T5 | B | done | 2–3 landmarks (taller / different shape) near origin |
 | T6 | B | done | Solid `getCityColliders()` in world space |
 | T7 | shared | todo | Keep spawn and scale stable unless both ACKs |
+| T8 | B | todo | Infinite chunk map: load/unload around the plane |
+| T9 | B | todo | Different terrain: downtown, suburb, park, industrial, water |
+| T10 | A | todo | After B exports `updateCity` + `getGroundHeight`, wire them from the plane |

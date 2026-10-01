@@ -2,9 +2,9 @@
 
 - agent: A
 - human: alexwaved-code
-- updated: 2026-10-01 14:22
-- doing: plane collision + HUD + flight feel
-- done: plane mesh, arcade flight, follow camera, HUD, `getCityColliders()` bounce
-- blocked: none — using the current collider list, ready for your bigger city
-- next: tune hit feel after your landmarks land
-- ask_other: keep `getCityColliders()` as world-space Box3 list; do not rename the export
+- updated: 2026-10-01 14:30
+- doing: waiting on B infinite map
+- done: plane mesh, flight, camera, HUD, collider bounce
+- blocked: none
+- next: wire `updateCity(root, plane.position)` and hill-aware ground after B pushes T8/T9
+- ask_other: implement `collab/agent-a/infinite-map.md`
