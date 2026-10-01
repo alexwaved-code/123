@@ -20,6 +20,7 @@ export function createPlane() {
 
   const visual = new THREE.Group();
   visual.name = "planeVisual";
+  visual.rotation.order = "YXZ";
 
   const body = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.7, 5.1), mat(0xf4f6f8));
   const nose = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.55, 1.1), mat(0x1d2228));

@@ -31,9 +31,10 @@ export function createFollowCamera(camera, plane) {
     camera.position.x += (Math.random() - 0.5) * shake;
     camera.position.y += (Math.random() - 0.5) * shake * 0.6;
 
+    const pitch = plane.userData.pitch ?? 0;
     look.set(
       plane.position.x - Math.sin(yaw) * 6,
-      plane.position.y + 0.35,
+      plane.position.y + 0.35 + pitch * 10,
       plane.position.z - Math.cos(yaw) * 6,
     );
     camera.lookAt(look);

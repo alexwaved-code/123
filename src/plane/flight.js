@@ -50,9 +50,11 @@ export function updateFlight(plane, delta) {
 
   const visual = plane.userData.visual;
   if (visual) {
+    const pitch = THREE.MathUtils.clamp(plane.userData.climbRate * 0.02, -0.55, 0.55);
+    visual.rotation.x = damp(visual.rotation.x, pitch, 8, delta);
     visual.rotation.z = damp(visual.rotation.z, plane.userData.yawRate * 0.38, 8, delta);
-    visual.rotation.x = damp(visual.rotation.x, -plane.userData.climbRate * 0.012, 8, delta);
   }
+  plane.userData.pitch = visual?.rotation.x ?? 0;
 
   const hit = resolveCollisions(plane);
   const telemetry = {
