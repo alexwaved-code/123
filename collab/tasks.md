@@ -17,3 +17,4 @@ Only edit your own rows. Move a row when you start or finish it.
 | T12 | A | done | Airport, takeoff/landing, crash, HUD upgrade |
 | T11 | A | done | Flying juice: inertia, camera, audio, clouds, lights, HUD |
 | T12 | B | done | Pause menu: stop the sim and change view, shadows, quality, HUD, volume |
+| T13 | B | done | F exits the plane: parachute in the sky, step off on the ground, ridiculous walk |

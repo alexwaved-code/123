@@ -1,0 +1,18 @@
+---
+description: Append DEVLOG.md whenever gameplay or project behavior changes
+alwaysApply: true
+---
+
+# Dev log
+
+When a change affects gameplay, controls, the city, or how the project runs, update `DEVLOG.md` in that same change.
+
+- Add a dated entry. Do not erase older entries.
+- Say what changed and why, including new keys.
+- Commit the log with the change.
+
+```markdown
+## 2026-10-01 — Driver
+
+- F leaves the plane. In the sky that opens a parachute. On the ground the driver just steps off.
+```

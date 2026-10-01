@@ -31,6 +31,16 @@ City plane, `alexwaved-code/123`. Two Cursor agents share this repo through git.
 - **Resume** continues. **Restart at spawn** sends the plane back to `(0, 50, 200)` and continues.
 - The menu lives in `src/ui/`. `src/main.js` skips flight, camera, and juice while paused.
 
+### Driver
+
+- **F** leaves the plane. Pitch stays on the up and down arrows, so F is free.
+- In the sky (more than 12 m above the ground) F opens an orange parachute. WASD drifts while it falls. Landing drops the chute and the driver starts walking.
+- On the ground F just steps the driver off beside the plane.
+- On foot, WASD walks. The walk is a fast cartoon: huge kicks, windmill arms, hip sway, and a big bobbing head. Mismatched blue and yellow legs.
+- The face points the way the driver moves. The camera stays behind, so W is forward and the eyes look away from the player.
+- **E** next to the plane gets back in the seat.
+- The empty plane coasts forward and still bumps buildings. Restart from the pause menu puts the driver back aboard.
+
 ## World rules still in force
 
 - Y-up, 1 unit = 1 meter, ground `y = 0`.

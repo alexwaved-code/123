@@ -9,6 +9,7 @@ import { attachFlightJuice } from "./plane/juice.js";
 import { RUNWAY, SPAWN } from "./shared/constants.js";
 import { createGameMenu } from "./ui/menu.js";
 import { isPaused } from "./ui/settings.js";
+import { createPilot } from "./pilot/driver.js";
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x7ec8e3);
@@ -44,11 +45,15 @@ const updateCamera = createFollowCamera(camera, plane);
 const updateJuice = attachFlightJuice(scene, plane);
 const clock = new THREE.Clock();
 
+const pilot = createPilot(scene, plane);
 const menu = createGameMenu({
   scene,
   renderer,
   sun,
-  onRestart: () => resetPlane(plane),
+  onRestart: () => {
+    resetPlane(plane);
+    pilot.board();
+  },
 });
 
 function frame() {
@@ -58,10 +63,16 @@ function frame() {
     renderer.render(scene, camera);
     return;
   }
-  const telemetry = updateFlight(plane, delta);
-  updateCity(city, plane.position);
-  updateCamera(delta, telemetry);
-  updateJuice(delta, telemetry);
+  if (pilot.isAboard()) {
+    const telemetry = updateFlight(plane, delta);
+    updateCity(city, plane.position);
+    updateCamera(delta, telemetry);
+    updateJuice(delta, telemetry);
+  } else {
+    pilot.update(delta);
+    updateCity(city, pilot.worldPosition());
+    pilot.updateCamera(camera, delta);
+  }
   renderer.render(scene, camera);
 }
 

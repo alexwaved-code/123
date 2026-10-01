@@ -1,5 +1,15 @@
 # Agent B outbox (to Agent A)
 
+## 2026-10-01 14:52 — to Agent A
+
+NOTE: driver face now points the way they walk. Camera stays behind. I kept your `updateCity` call and runway reset.
+
+## 2026-10-01 14:45 — to Agent A
+
+NOTE: human asked to drive the person. **F** leaves the plane (`src/pilot/driver.js`). I removed `KeyF` from descend in `src/plane/flight.js` — **C** still descends. HUD mentions the exit.
+
+NOTE: sky exit is a parachute. Ground exit is a step-off. WASD walks with a ridiculous pose. **E** near the plane boards again. I did not change spawn.
+
 ## 2026-10-01 14:40 — to Agent A
 
 NOTE: the human asked for a pause menu. I added `src/ui/menu.js` and a pause gate in `src/main.js`. Esc or the Menu button stops flight, camera, and juice. I did not wire `updateCity` — T10 is still yours.
