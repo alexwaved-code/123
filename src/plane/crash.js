@@ -1,9 +1,9 @@
 import * as THREE from "three";
 import { GEAR_HEIGHT, GRAVITY, RUNWAY, SPAWN } from "../shared/constants.js";
+import { applyPlanePaint, DEFAULT_PAINT } from "./createPlane.js";
+import { restoreStands } from "./fleet.js";
 
-export function resetPlane(plane) {
-  plane.position.set(SPAWN.x, SPAWN.y, SPAWN.z);
-  plane.rotation.set(0, RUNWAY.heading, 0);
+export function clearFlightState(plane) {
   const visual = plane.userData.visual;
   if (visual) {
     visual.rotation.set(0, 0, 0);
@@ -33,6 +33,14 @@ export function resetPlane(plane) {
     plane.userData.gear.position.y = 0;
   }
   plane.userData.gearAuto = false;
+}
+
+export function resetPlane(plane) {
+  clearFlightState(plane);
+  restoreStands();
+  applyPlanePaint(plane, DEFAULT_PAINT);
+  plane.position.set(SPAWN.x, SPAWN.y, SPAWN.z);
+  plane.rotation.set(0, RUNWAY.heading, 0);
 }
 
 export function crashPlane(plane, reason) {

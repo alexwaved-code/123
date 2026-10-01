@@ -13,10 +13,21 @@ function lightBulb(color, x, y, z) {
   return mesh;
 }
 
+export const DEFAULT_PAINT = 0xc43b3b;
+
+export function applyPlanePaint(plane, color) {
+  const paint = plane.userData.paint ?? [];
+  for (const mesh of paint) {
+    mesh.material.color.setHex(color);
+  }
+  plane.userData.paintColor = color;
+}
+
 /** Agent A. Visual child holds bank/pitch so city colliders stay axis-aligned on the root. */
-export function createPlane() {
+export function createPlane(options = {}) {
+  const paintColor = options.paint ?? DEFAULT_PAINT;
   const root = new THREE.Group();
-  root.name = "plane";
+  root.name = options.name ?? "plane";
 
   const visual = new THREE.Group();
   visual.name = "planeVisual";
@@ -30,11 +41,11 @@ export function createPlane() {
     mat(0x79c4e8, { roughness: 0.12, metalness: 0.55, transparent: true, opacity: 0.88 }),
   );
   canopy.position.set(0, 0.48, -0.55);
-  const wing = new THREE.Mesh(new THREE.BoxGeometry(8.4, 0.12, 1.55), mat(0xc43b3b));
+  const wing = new THREE.Mesh(new THREE.BoxGeometry(8.4, 0.12, 1.55), mat(paintColor));
   wing.position.set(0, -0.02, 0.15);
-  const tailWing = new THREE.Mesh(new THREE.BoxGeometry(3.1, 0.1, 0.85), mat(0xc43b3b));
+  const tailWing = new THREE.Mesh(new THREE.BoxGeometry(3.1, 0.1, 0.85), mat(paintColor));
   tailWing.position.set(0, 0.18, 2.15);
-  const fin = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.25, 0.9), mat(0xc43b3b));
+  const fin = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.25, 0.9), mat(paintColor));
   fin.position.set(0, 0.75, 2.2);
   const prop = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.7, 0.18), mat(0x2a2e33));
   prop.position.set(0, 0, -3.45);
@@ -105,5 +116,7 @@ export function createPlane() {
   root.userData.gear = gear;
   root.userData.yawRate = 0;
   root.userData.climbRate = 0;
+  root.userData.paint = [wing, tailWing, fin];
+  root.userData.paintColor = paintColor;
   return root;
 }

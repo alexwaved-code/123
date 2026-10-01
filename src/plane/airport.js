@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { registerCollider } from "../city/colliders.js";
 import { onRunway, RUNWAY } from "../shared/constants.js";
+import { parkRamp } from "./fleet.js";
 
 function mat(color, extras = {}) {
   return new THREE.MeshStandardMaterial({ color, roughness: 0.92, metalness: 0.04, ...extras });
@@ -56,7 +57,11 @@ export function createAirport() {
   }
 
   root.add(paint(18, 160, 0.035, RUNWAY.x - 38, -520, 0x4a4f55));
-  root.add(paint(70, 90, 0.03, RUNWAY.x - 78, -520, 0x555b63));
+  root.add(paint(70, 90, 0.03, RUNWAY.x - 78, -528, 0x555b63));
+  for (const z of [-560, -534, -508]) {
+    root.add(paint(16, 12, 0.04, RUNWAY.x - 52, z, 0x3d4248));
+  }
+  parkRamp(root);
 
   root.add(solid(48, 10, 22, RUNWAY.x - 88, 5, -500, 0xc5c1b6));
   root.add(solid(8, 28, 8, RUNWAY.x - 58, 14, -470, 0x8b93a0));

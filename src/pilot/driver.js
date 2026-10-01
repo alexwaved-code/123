@@ -4,6 +4,7 @@ import { nearestRoadPoint, roadRoute } from "../city/roads.js";
 import { getGroundHeight } from "../city/terrain.js";
 import { setFlightAudible } from "../plane/audio.js";
 import { setFlightInput, updateAbandonedPlane } from "../plane/flight.js";
+import { needsTaxi, nearRide, taxiDropoff, tryBoardNear } from "../plane/fleet.js";
 import { setWalkBanner } from "../plane/hud.js";
 import { getSettings, hasStarted, isPaused } from "../ui/settings.js";
 
@@ -217,12 +218,12 @@ export function createPilot(scene, plane) {
       return;
     }
     if (ride === "dropoff") {
-      setWalkBanner("<div><b>TAXI</b></div><div>Riding to the plane</div>");
+      setWalkBanner("<div><b>TAXI</b></div><div>Riding to the airport ramp</div>");
       return;
     }
-    const near = driver.root.position.distanceTo(plane.position) < 8;
+    const near = nearRide(plane, driver.root.position.x, driver.root.position.z);
     const pace = isRunning() ? "run" : "walk";
-    const away = driver.root.position.distanceTo(plane.position) > 28;
+    const away = needsTaxi(plane, driver.root.position.x, driver.root.position.z);
     const hailNote = ride === "pickup"
       ? " · hand up, taxi coming"
       : ride === "dropoff"
@@ -230,7 +231,7 @@ export function createPilot(scene, plane) {
         : away
           ? " · hold H to hail a taxi"
           : "";
-    setWalkBanner(`<div><b>ON FOOT</b></div><div>WASD ${pace} · arrows look · Right Shift run · Space jump${near ? " · E get back in" : ""}${hailNote}</div>`);
+    setWalkBanner(`<div><b>ON FOOT</b></div><div>WASD ${pace} · arrows look · Right Shift run · Space jump${near ? " · E board" : ""}${hailNote}</div>`);
   }
 
   function shoveOutOfBuildings() {
@@ -557,7 +558,7 @@ export function createPilot(scene, plane) {
   }
 
   function updateHail(delta) {
-    const away = mode === "walk" && ride === "none" && driver.root.position.distanceTo(plane.position) > 28;
+    const away = mode === "walk" && ride === "none" && needsTaxi(plane, driver.root.position.x, driver.root.position.z);
     const holding = away && (keys.has("KeyH") || pointerHail);
     if (holding) hail = Math.min(HAIL_TIME, hail + delta);
     else if (ride === "none") hail = Math.max(0, hail - delta * 1.6);
@@ -566,6 +567,11 @@ export function createPilot(scene, plane) {
   }
 
   function rememberDropoff() {
+    const ramp = taxiDropoff(plane);
+    if (ramp) {
+      drop.set(ramp.x, 0, ramp.z);
+      return;
+    }
     for (const extra of [0, 0.9, -0.9, 1.7, -1.7, Math.PI]) {
       const angle = plane.rotation.y + extra;
       const x = plane.position.x + Math.cos(angle) * 6;
@@ -600,15 +606,16 @@ export function createPilot(scene, plane) {
       return;
     }
     if (ride !== "dropoff") return;
-    const spot = goalOnRoad(plane.position);
-    const distPlane = Math.hypot(taxi.position.x - plane.position.x, taxi.position.z - plane.position.z);
-    if (!taxiLeaving && distPlane < 18 && !spot.onRoad) {
+    const dest = taxiDropoff(plane) ?? plane.position;
+    const spot = goalOnRoad(dest);
+    const distGoal = Math.hypot(taxi.position.x - dest.x, taxi.position.z - dest.z);
+    if (!taxiLeaving && distGoal < 18 && !spot.onRoad) {
       taxiLeaving = true;
       roadPath = [];
       rememberDropoff();
     }
     if (!taxiLeaving) {
-      if (spot.onRoad && distPlane < 6) {
+      if (spot.onRoad && distGoal < 6) {
         rememberDropoff();
         driver.root.visible = true;
         driver.root.position.set(drop.x, getGroundHeight(drop.x, drop.z), drop.z);
@@ -621,9 +628,9 @@ export function createPilot(scene, plane) {
         grounded = true;
         return;
       }
-      if (!spot.approach) moveTaxi(delta, 22, plane.position.x, plane.position.z, true, false);
+      if (!spot.approach) moveTaxi(delta, 22, dest.x, dest.z, true, false);
       else {
-        const aim = spot.onRoad ? plane.position : spot.approach;
+        const aim = spot.onRoad ? dest : spot.approach;
         followRoad(aim.x, aim.z, delta, 22);
       }
       return;
@@ -645,7 +652,7 @@ export function createPilot(scene, plane) {
   }
 
   function syncHailButton() {
-    const show = mode === "walk" && ride !== "dropoff" && driver.root.position.distanceTo(plane.position) > 28;
+    const show = mode === "walk" && ride !== "dropoff" && needsTaxi(plane, driver.root.position.x, driver.root.position.z);
     hailButton.style.display = show ? "block" : "none";
     if (!show) return;
     if (ride === "pickup") hailButton.textContent = "Taxi is coming";
@@ -661,7 +668,9 @@ export function createPilot(scene, plane) {
       event.preventDefault();
       tryJump();
     }
-    if (event.code === "KeyE" && mode === "walk" && ride !== "dropoff" && driver.root.position.distanceTo(plane.position) < 8) board();
+    if (event.code === "KeyE" && mode === "walk" && ride !== "dropoff" && tryBoardNear(plane, driver.root.position.x, driver.root.position.z)) {
+      board();
+    }
   });
 
   return {

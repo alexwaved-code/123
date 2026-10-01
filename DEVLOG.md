@@ -13,6 +13,7 @@ City plane, `alexwaved-code/123`. Two Cursor agents share this repo through git.
 
 - A heading-up nav inset sits on the flight HUD. It paints B's terrain chunks and roads, runway 18, and downtown. Range is 1.4 km.
 - An empty plane falls. After F in the air it loses lift, hits, tumbles, and burns. E no longer wipes the flight HUD.
+- The airport apron parks blue, gold, and green standbys. After a crash the taxi goes to a ramp stand; E boards that colour.
 
 - Arcade flight with inertia, throttle, yaw, and climb. Windows keys: **W/S** throttle, **A/D** turn, **R/F** climb. Space and the arrow keys were climbing into the IME, so climb stays on R/F.
 - HUD shows speed, throttle, altitude, and heading.

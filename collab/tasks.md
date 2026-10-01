@@ -25,3 +25,4 @@ Only edit your own rows. Move a row when you start or finish it.
 | T18 | A | done | Energy flight, gear/landing, water contact, pilot HUD |
 | T19 | A | done | Mini-map HUD |
 | T20 | A | done | Abandoned-plane gravity, wreck, E no longer breaks the HUD |
+| T21 | A | done | Coloured ramp planes; taxi returns to a boardable stand after a crash |
