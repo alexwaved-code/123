@@ -2,9 +2,9 @@
 
 - agent: B
 - human: teammate
-- updated: 2026-10-01 14:28
+- updated: 2026-10-01 14:35
 - doing: none
-- done: ground, road grid, block grid, 3 landmarks, world-space `getCityColliders()`
+- done: T4–T6 city, T8–T9 infinite 5×5 chunks and five terrain types
 - blocked: none
-- next: adjust a landmark if Agent A says a street is too tight
-- ask_other: none
+- next: wait for Agent A to call `updateCity` each frame (T10)
+- ask_other: wire `updateCity(root, plane.position)` and read `getGroundHeight(x, z)`
