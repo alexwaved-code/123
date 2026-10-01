@@ -8,7 +8,6 @@ import { updateHud } from "./hud.js";
 
 const keys = new Set();
 const just = new Set();
-const keyAt = new Map();
 
 const CLIMB = ["ArrowUp", "Numpad8"];
 const DESCEND = ["ArrowDown", "Numpad2"];
@@ -34,18 +33,15 @@ function onKeyDown(event) {
   event.preventDefault();
   if (!keys.has(event.code)) just.add(event.code);
   keys.add(event.code);
-  keyAt.set(event.code, performance.now());
 }
 
 function onKeyUp(event) {
   keys.delete(event.code);
-  keyAt.delete(event.code);
 }
 
 function clearKeys() {
   keys.clear();
   just.clear();
-  keyAt.clear();
 }
 
 window.addEventListener("keydown", onKeyDown, { capture: true });
@@ -64,8 +60,7 @@ if (import.meta.hot) {
 }
 
 function held(codes) {
-  const now = performance.now();
-  return codes.some((code) => keys.has(code) && now - (keyAt.get(code) ?? 0) < 140) ? 1 : 0;
+  return codes.some((code) => keys.has(code)) ? 1 : 0;
 }
 
 function tapped(code) {
@@ -153,17 +148,18 @@ export function updateFlight(plane, delta) {
 
   if (!plane.userData.airborne) {
     const brake = held(DESCEND) * 16;
-    const roll = plane.userData.throttle * 36 - plane.userData.speed * 0.55 - brake;
+    const roll = plane.userData.throttle * 48 - plane.userData.speed * 0.35 - brake;
     plane.userData.speed = Math.max(0, plane.userData.speed + roll * delta);
     const taxiTurn = THREE.MathUtils.lerp(1.05, 0.28, THREE.MathUtils.clamp(plane.userData.speed / 40, 0, 1));
     plane.userData.yawRate = damp(plane.userData.yawRate, yawIn * taxiTurn, 8, delta);
     plane.rotation.y += plane.userData.yawRate * delta;
 
-    const canRotate = plane.userData.speed >= VR && rwy;
-    plane.userData.pitchAtt = damp(plane.userData.pitchAtt, canRotate ? Math.max(0, climbIn) * 0.22 : 0, 8, delta);
-    if (canRotate && climbIn > 0 && plane.userData.pitchAtt > 0.08) {
+    const canRotate = plane.userData.speed >= VR && (rwy || Math.abs(plane.position.x - RUNWAY.x) < 80);
+    plane.userData.pitchAtt = damp(plane.userData.pitchAtt, canRotate ? Math.max(0, climbIn) * 0.28 : 0, 10, delta);
+    if (canRotate && climbIn > 0) {
       plane.userData.airborne = true;
-      plane.userData.vs = 1.8;
+      plane.userData.vs = 4.2;
+      plane.userData.pitchAtt = Math.max(plane.userData.pitchAtt, 0.22);
     } else {
       plane.position.y = deck;
       plane.userData.vs = 0;

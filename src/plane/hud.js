@@ -80,7 +80,7 @@ export function updateHud(telemetry) {
   const alignOk = (telemetry.align ?? 1) < 0.22;
   const help = telemetry.airborne
     ? "W/S throttle  A/D turn  Up/Down pitch  G gear  F leave"
-    : "W throttle  S cut  Up rotate after Vr  Down brake  F step off";
+    : "Hold W to speed up. At Vr hold Up arrow to take off. Down = brake. F = leave";
 
   el.innerHTML = [
     `<div style="opacity:.65;letter-spacing:.12em">${telemetry.phase ?? ""}</div>`,

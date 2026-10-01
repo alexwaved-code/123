@@ -15,9 +15,9 @@ export const UP = { x: 0, y: 1, z: 0 };
 /** 1 unit = 1 meter. Do not change without an Agent A + Agent B ACK. */
 export const METERS = 1;
 
-export const VS = 16;
-export const VR = 28;
-export const VREF = 22;
+export const VS = 14;
+export const VR = 18;
+export const VREF = 20;
 export const GRAVITY = 19;
 
 export function onRunway(x, z) {
