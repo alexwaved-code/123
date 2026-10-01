@@ -47,6 +47,37 @@ function project(x, z, seg) {
   return { x: seg.x1 + dx * t, z: seg.z1 + dz * t, t, seg };
 }
 
+function onSegment(x, z, seg, extra = 0.4) {
+  const hit = project(x, z, seg);
+  return Math.hypot(hit.x - x, hit.z - z) <= seg.width * 0.5 + extra;
+}
+
+/**
+ * Short steps along roads that pass under (x, z).
+ * A step past the end of the asphalt is left out, so the road edge is not a stop.
+ */
+export function roadSteps(x, z, reach = 8) {
+  const segs = segmentsAround(x, z, 1);
+  const here = segs.filter((seg) => onSegment(x, z, seg));
+  const steps = [];
+  const seen = new Set();
+  for (const seg of here) {
+    const dx = seg.x2 - seg.x1;
+    const dz = seg.z2 - seg.z1;
+    const len = Math.hypot(dx, dz) || 1;
+    for (const sign of [1, -1]) {
+      const px = x + (dx / len) * sign * reach;
+      const pz = z + (dz / len) * sign * reach;
+      if (!segs.some((other) => onSegment(px, pz, other))) continue;
+      const key = `${Math.round(px)},${Math.round(pz)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      steps.push({ x: px, z: pz });
+    }
+  }
+  return { steps, onRoad: here.length > 0 };
+}
+
 export function nearestRoadPoint(x, z, segs = segmentsAround(x, z)) {
   let best = null;
   let bestD = Infinity;

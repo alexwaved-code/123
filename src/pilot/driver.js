@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { getCityColliders } from "../city/colliders.js";
-import { nearestRoadPoint, roadRoute } from "../city/roads.js";
+import { nearestRoadPoint, roadSteps } from "../city/roads.js";
 import { getGroundHeight } from "../city/terrain.js";
 import { resolveCollisions } from "../plane/collision.js";
 import { setFlightAudible } from "../plane/audio.js";
@@ -167,10 +167,6 @@ export function createPilot(scene, plane) {
   const body = new THREE.Box3();
   const size = new THREE.Vector3(0.7, 1.7, 0.7);
   const center = new THREE.Vector3();
-  let route = [];
-  let routeCursor = 0;
-  let routeCooldown = 0;
-  const routeGoal = new THREE.Vector3();
   const drop = new THREE.Vector3();
   const taxi = buildTaxi();
   scene.add(taxi);
@@ -385,8 +381,8 @@ export function createPilot(scene, plane) {
 
   function blockedAt(x, z) {
     for (const building of getCityColliders()) {
-      if (x <= building.min.x - 1.15 || x >= building.max.x + 1.15) continue;
-      if (z <= building.min.z - 1.15 || z >= building.max.z + 1.15) continue;
+      if (x <= building.min.x - 0.45 || x >= building.max.x + 0.45) continue;
+      if (z <= building.min.z - 0.45 || z >= building.max.z + 0.45) continue;
       return true;
     }
     return false;
@@ -415,37 +411,29 @@ export function createPilot(scene, plane) {
     return Math.hypot(target.x - nx, target.z - nz);
   }
 
-  function refreshRoute(goal, delta) {
-    routeCooldown -= delta;
-    const goalMoved = Math.hypot(goal.x - routeGoal.x, goal.z - routeGoal.z) > 10;
-    if (route.length > 0 && routeCooldown > 0 && !goalMoved) return;
-    routeCooldown = 0.45;
-    routeGoal.set(goal.x, goal.y, goal.z);
-    const path = roadRoute(taxi.position.x, taxi.position.z, goal.x, goal.z);
-    path.push({ x: goal.x, z: goal.z });
-    route = path;
-    routeCursor = 0;
-  }
-
-  function driveRoute(goal, delta, speed) {
-    const direct = Math.hypot(goal.x - taxi.position.x, goal.z - taxi.position.z);
-    const goalRoad = nearestRoadPoint(goal.x, goal.z);
-    const offRoad = goalRoad ? goalRoad.dist : 0;
-    if (direct < Math.max(14, offRoad + 5)) return driveToward(goal, delta, speed);
-    refreshRoute(goal, delta);
-    while (routeCursor < route.length - 1) {
-      const point = route[routeCursor];
-      if (Math.hypot(point.x - taxi.position.x, point.z - taxi.position.z) < 2.4) routeCursor += 1;
-      else break;
+  function driveTaxi(goal, delta, speed) {
+    const { steps, onRoad } = roadSteps(taxi.position.x, taxi.position.z, 8);
+    const approach = nearestRoadPoint(goal.x, goal.z);
+    const goalOnRoad = Boolean(approach && approach.dist <= approach.seg.width * 0.5 + 1);
+    const aim = !approach || goalOnRoad ? goal : approach;
+    if (onRoad) {
+      const here = Math.hypot(taxi.position.x - aim.x, taxi.position.z - aim.z);
+      const choices = steps
+        .map((step) => ({ step, d: Math.hypot(step.x - aim.x, step.z - aim.z) }))
+        .filter((item) => item.d < here - 0.5)
+        .sort((a, b) => a.d - b.d);
+      const x0 = taxi.position.x;
+      const z0 = taxi.position.z;
+      for (const item of choices) {
+        driveToward(item.step, delta, speed);
+        if (Math.hypot(taxi.position.x - x0, taxi.position.z - z0) > 0.01) return;
+      }
     }
-    const point = route[Math.min(routeCursor, route.length - 1)];
-    return driveToward(point, delta, speed);
+    driveToward(goal, delta, speed);
   }
 
   function callTaxi() {
     ride = "pickup";
-    route = [];
-    routeCooldown = 0;
     const near = nearestRoadPoint(driver.root.position.x, driver.root.position.z);
     let spawnX = driver.root.position.x - Math.sin(lookYaw) * 42;
     let spawnZ = driver.root.position.z - Math.cos(lookYaw) * 42;
@@ -502,7 +490,7 @@ export function createPilot(scene, plane) {
   function updateTaxi(delta) {
     updateLook(delta);
     if (ride === "pickup") {
-      driveRoute(driver.root.position, delta, 18);
+      driveTaxi(driver.root.position, delta, 18);
       raiseHand();
       const dist = Math.hypot(
         taxi.position.x - driver.root.position.x,
@@ -514,7 +502,6 @@ export function createPilot(scene, plane) {
       );
       if (dist < 4.2 || (dist < 8 && midBlocked)) {
         ride = "dropoff";
-        route = [];
         driver.root.visible = false;
         rememberDropoff();
       }
@@ -522,14 +509,13 @@ export function createPilot(scene, plane) {
     }
     if (ride !== "dropoff") return;
     if (!plane.userData.airborne) rememberDropoff();
-    driveRoute(drop, delta, 22);
+    driveTaxi(drop, delta, 22);
     const dist = Math.hypot(taxi.position.x - drop.x, taxi.position.z - drop.z);
     if (dist > 3.6) return;
     driver.root.visible = true;
     driver.root.position.set(drop.x, getGroundHeight(drop.x, drop.z), drop.z);
     taxi.visible = false;
     ride = "none";
-    route = [];
     hail = 0;
     vy = 0;
     grounded = true;
